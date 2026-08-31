@@ -1,0 +1,16 @@
+[Unit]
+Description=PDD Radar v2
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/pdd-radar-v2-full
+ExecStart=/usr/bin/node /opt/pdd-radar-v2-full/src/server.js
+Restart=always
+RestartSec=3
+Environment=NODE_ENV=production
+Environment=PORT=8080
+
+[Install]
+WantedBy=multi-user.target
+
