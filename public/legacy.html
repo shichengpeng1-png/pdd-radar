@@ -10,7 +10,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>拼多多截图销量追踪器</title>
-  <link rel="stylesheet" href="/style.css?v=17">
+  <link rel="stylesheet" href="/style.css?v=18">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onerror="console.error('Chart.js 加载失败')"></script>
 </head>
 <body>
@@ -65,7 +65,7 @@
               <select id="storeChartType" class="input-field">
                 <option value="sessionGrowth">距上次记录销量增长总和</option>
                 <option value="avgDaily">平均每日增长趋势</option>
-                <option value="customSince">距自定义时间销量增长</option>
+                <option value="customSince">距自定义时间销量增长占比（圆形）</option>
               </select>
             </div>
             <div class="chart-control-group" id="customSinceControls" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -367,7 +367,7 @@
     </div>
   </div>
 
-  <script src="/app.js?v=31"></script>
+  <script src="/app.js?v=32"></script>
 </body>
 </html>
 
