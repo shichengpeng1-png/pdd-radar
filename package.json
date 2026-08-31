@@ -1,0 +1,21 @@
+{
+  "name": "pdd-radar-v2",
+  "version": "2.0.0",
+  "private": true,
+  "description": "拼多多销量追踪中心",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node --check src/server.js && node --check src/storage.js && node --check public/app.js && node --check public/dashboard-v3.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}
+
