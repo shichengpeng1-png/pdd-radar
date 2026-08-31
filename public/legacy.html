@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f1115">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>拼多多截图销量追踪器</title>
+  <link rel="stylesheet" href="/style.css?v=17">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onerror="console.error('Chart.js 加载失败')"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <h1 class="logo">📸 销量追踪</h1>
+      <button id="headerBackBtn" class="btn btn-secondary btn-sm header-back-btn">← 返回多多雷达</button>
+      <span id="versionTag" style="font-size:10px;color:var(--text-muted);">v9</span>
+    </header>
+
+    <div class="body-container">
+      <!-- 面板1：店铺 -->
+      <div id="panel-stores" class="panel active">
+        <div class="panel-header">
+          <span class="panel-header-title">店铺</span>
+          <button id="addStoreBtn" class="btn btn-primary btn-sm">+ 添加</button>
+        </div>
+        <div id="storeList" class="list-group"></div>
+      </div>
+
+      <!-- 面板2：商品 -->
+      <div id="panel-products" class="panel">
+        <div class="panel-header">
+          <span class="panel-header-title" id="productsTitle">商品</span>
+          <div style="display:flex;gap:6px;">
+            <button id="batchRecordBtn" class="btn btn-primary btn-sm" disabled>批量记录</button>
+            <button id="addProductBtn" class="btn btn-primary btn-sm" disabled>+ 添加</button>
+          </div>
+        </div>
+        <!-- 商品面板Tab -->
+        <div class="sub-tabs">
+          <button class="sub-tab-btn active" data-subtab="product-list">商品列表</button>
+          <button class="sub-tab-btn" data-subtab="store-stats">整店统计</button>
+        </div>
+        <div id="subtab-product-list" class="sub-tab-content active">
+          <div class="search-bar">
+            <input type="text" id="productSearchInput" class="input-field search-input" placeholder="搜索商品名称...">
+            <select id="productSortSelect" class="input-field" style="width:auto;flex-shrink:0;font-size:12px;padding:6px 8px;">
+              <option value="default">默认排序</option>
+              <option value="growth-desc">销量增长 ↓</option>
+              <option value="growth-asc">销量增长 ↑</option>
+              <option value="first-growth-desc">距首次记录增长 ↓</option>
+              <option value="first-growth-asc">距首次记录增长 ↑</option>
+            </select>
+          </div>
+          <div id="productList" class="list-group"></div>
+        </div>
+        <div id="subtab-store-stats" class="sub-tab-content">
+          <div class="chart-controls">
+            <div class="chart-control-group">
+              <label>图表类型</label>
+              <select id="storeChartType" class="input-field">
+                <option value="sessionGrowth">距上次记录销量增长总和</option>
+                <option value="avgDaily">平均每日增长趋势</option>
+                <option value="customSince">距自定义时间销量增长</option>
+              </select>
+            </div>
+            <div class="chart-control-group" id="customSinceControls" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;">
+              <label>选择时间</label>
+              <input type="datetime-local" id="customSinceTime" class="input-field" style="width:auto;" />
+              <div class="custom-since-quick">
+                <button type="button" class="btn btn-secondary btn-xs custom-since-quick-btn" data-hours="24">近24小时</button>
+                <button type="button" class="btn btn-secondary btn-xs custom-since-quick-btn" data-hours="72">近3天</button>
+                <button type="button" class="btn btn-secondary btn-xs custom-since-quick-btn" data-hours="168">近7天</button>
+              </div>
+              <button class="btn btn-primary" id="customSinceBtn" style="white-space:nowrap;">查询</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="storeChart"></canvas>
+          </div>
+          <div id="storeGrowthSummary" class="growth-summary"></div>
+        </div>
+      </div>
+
+      <!-- 面板3：详情 -->
+      <div id="panel-detail" class="panel">
+        <!-- 空状态 -->
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">📸</div>
+          <p>选择一个商品<br>手动填写销量和评价数据</p>
+        </div>
+
+        <!-- 商品详情 -->
+        <div id="productDetail" class="main-content" style="display:none;">
+          <div class="product-info-bar">
+            <span class="breadcrumb" id="breadcrumb"></span>
+            <div class="product-title-price-row">
+              <label class="detail-price-editor" title="修改商品价格">
+                <span>¥</span>
+                <input id="currentProductPrice" type="text" inputmode="decimal" placeholder="价格">
+              </label>
+              <h2 id="currentProductName"></h2>
+            </div>
+            <button id="editProductBtn" class="btn btn-secondary btn-sm" style="margin-top:4px;">✏️ 修改标题</button>
+            <a id="currentProductUrl" class="product-url" target="_blank"></a>
+            <button id="fetchSalesBtn" class="btn btn-accent btn-sm" style="margin-top:4px;display:none;">🔗 访问网址</button>
+
+            <!-- 商品截图 -->
+            <div class="product-screenshot-area">
+              <div id="productScreenshotContainer" class="product-screenshot-container">
+                <img id="productScreenshotImg" class="product-screenshot-img" alt="商品截图" style="display:none;">
+                <div id="productScreenshotPlaceholder" class="product-screenshot-placeholder">
+                  <span>📷 上传商品页面截图以区分商品</span>
+                </div>
+              </div>
+              <input type="file" id="productScreenshotInput" accept="image/*" style="display:none;">
+              <button id="uploadProductScreenshotBtn" class="btn btn-secondary btn-sm">📷 上传商品截图</button>
+            </div>
+
+            <div class="detail-actions">
+              <button id="uploadBtn" class="btn btn-accent">+ 添加记录</button>
+              <button id="deleteProductBtn" class="btn btn-danger">删除商品</button>
+            </div>
+          </div>
+
+          <div class="stats-cards">
+            <div class="stat-card">
+              <span class="stat-label">记录次数</span>
+              <span class="stat-value" id="statRecordCount">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">最新销量</span>
+              <span class="stat-value" id="statLatestSales">-</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">最新评价</span>
+              <span class="stat-value" id="statLatestReviews">-</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">总增长</span>
+              <span class="stat-value" id="statTotalGrowth">-</span>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="records">记录列表</button>
+            <button class="tab-btn" data-tab="charts">增长图表</button>
+          </div>
+
+          <div id="tab-records" class="tab-content active">
+            <div id="recordList" class="record-list"></div>
+          </div>
+
+          <div id="tab-charts" class="tab-content">
+            <div class="chart-controls">
+              <div class="chart-control-group">
+                <label>图表类型</label>
+                <select id="chartType" class="input-field">
+                  <option value="interval">相邻两次记录的销量增长</option>
+                  <option value="custom-interval">自定义区间销量增长</option>
+                  <option value="cumulative">距首次销量增长趋势</option>
+                  <option value="total">总销量趋势</option>
+                  <option value="reviews">商品评价趋势</option>
+                </select>
+              </div>
+              <div id="customIntervalControls" class="chart-control-group" style="display:none;flex-wrap:wrap;gap:6px;">
+                <label style="font-size:12px;">从第</label>
+                <select id="customIntervalStart" class="input-field" style="width:auto;font-size:12px;padding:4px;"></select>
+                <label style="font-size:12px;">到第</label>
+                <select id="customIntervalEnd" class="input-field" style="width:auto;font-size:12px;padding:4px;"></select>
+                <label style="font-size:12px;">次记录</label>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="growthChart"></canvas>
+            </div>
+            <div id="growthSummary" class="growth-summary"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑店铺弹窗 -->
+    <div id="editStoreModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3 style="margin-bottom:16px;">编辑店铺</h3>
+        <div class="modal-form">
+          <label>店铺名称</label>
+          <input type="text" id="editStoreName" class="input-field" placeholder="例如：官方旗舰店">
+          <label>店铺首页链接（可选）</label>
+          <input type="url" id="editStoreUrl" class="input-field" placeholder="https://mobile.yangkeduo.com/mall_page.html?...">
+          <div class="modal-actions">
+            <button class="btn btn-secondary modal-cancel">取消</button>
+            <button id="confirmEditStore" class="btn btn-primary">保存修改</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部导航栏 -->
+    <nav class="tab-bar">
+      <button class="tab-bar-item active" data-panel="stores">
+        <span class="tab-bar-icon">🏬</span>
+        <span>店铺</span>
+      </button>
+      <button class="tab-bar-item" data-panel="products">
+        <span class="tab-bar-icon">📦</span>
+        <span>商品</span>
+      </button>
+      <button class="tab-bar-item" data-panel="detail">
+        <span class="tab-bar-icon">📊</span>
+        <span>详情</span>
+      </button>
+    </nav>
+
+    <!-- 添加店铺弹窗 -->
+    <div id="addStoreModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3 style="margin-bottom:16px;">添加店铺</h3>
+        <div class="modal-form">
+          <label>店铺名称</label>
+          <input type="text" id="newStoreName" class="input-field" placeholder="例如：官方旗舰店">
+          <label>店铺首页链接（可选）</label>
+          <input type="url" id="newStoreUrl" class="input-field" placeholder="https://mobile.yangkeduo.com/mall_page.html?...">
+          <div class="modal-actions">
+            <button class="btn btn-secondary modal-cancel">取消</button>
+            <button id="confirmAddStore" class="btn btn-primary">确认添加</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加商品弹窗 -->
+    <div id="addProductModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3 style="margin-bottom:4px;">添加商品</h3>
+        <p id="addProductStoreName" style="color:var(--text-muted);font-size:13px;margin-bottom:16px;"></p>
+        <div class="modal-form">
+          <label>商品名称</label>
+          <input type="text" id="newProductName" class="input-field" placeholder="例如：无线蓝牙耳机">
+          <label>拼多多链接（可选）</label>
+          <input type="text" id="newProductUrl" class="input-field" placeholder="https://mobile.yangkeduo.com/goods.html?...">
+          <div class="modal-actions">
+            <button class="btn btn-secondary modal-cancel">取消</button>
+            <button id="confirmAddProduct" class="btn btn-primary">确认添加</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加记录弹窗（手动填写） -->
+    <div id="uploadModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3 style="margin-bottom:16px;">添加记录</h3>
+        <div class="modal-form">
+          <label>销量</label>
+          <input type="text" id="ocrSalesText" class="input-field" placeholder="例如：已拼1.2万件 或 12000">
+          <span class="ocr-hint">解析数值：<strong id="ocrSalesNumber">0</strong></span>
+          <label>商品评价（ ）</label>
+          <input type="text" id="ocrReviewsText" class="input-field" placeholder="例如：评价326条 或 326">
+          <span class="ocr-hint">解析数值：<strong id="ocrReviewsNumber">0</strong></span>
+          <label>备注（可选）</label>
+          <input type="text" id="ocrNotes" class="input-field" placeholder="例如：活动期间">
+          <div class="modal-actions">
+            <button id="cancelUpload" class="btn btn-secondary modal-cancel">取消</button>
+            <button id="confirmUpload" class="btn btn-primary">保存记录</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 截图查看弹窗 -->
+    <div id="imageModal" class="modal" style="display:none;">
+      <div class="modal-content modal-image-viewer">
+        <button id="closeImageModal" class="btn btn-secondary modal-close-btn">✕</button>
+        <img id="modalImage" class="modal-image" alt="截图">
+      </div>
+    </div>
+
+    <!-- 编辑记录弹窗 -->
+    <div id="editRecordModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3 style="margin-bottom:16px;">修改记录</h3>
+        <div class="modal-form">
+          <label>销量</label>
+          <input type="text" id="editSalesText" class="input-field">
+          <label>商品评价（ ）</label>
+          <input type="text" id="editReviewsText" class="input-field">
+          <label>备注</label>
+          <input type="text" id="editNotes" class="input-field">
+          <div class="modal-actions">
+            <button class="btn btn-secondary modal-cancel">取消</button>
+            <button id="confirmEditRecord" class="btn btn-primary">保存修改</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 修改商品弹窗 -->
+    <div id="editProductModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3 style="margin-bottom:6px;">编辑商品与记录销量</h3>
+        <p style="color:var(--text-muted);font-size:12px;margin-bottom:14px;">可修改商品资料，也可填写销量或粘贴截图自动识别并新增记录。</p>
+        <div class="modal-form">
+          <label>商品名称</label>
+          <input type="text" id="editProductName" class="input-field">
+          <label>拼多多链接</label>
+          <div class="edit-product-url-row">
+            <input type="text" id="editProductUrl" class="input-field" placeholder="可选">
+            <button type="button" id="editProductVisitUrl" class="btn btn-secondary">🔗 访问网址</button>
+          </div>
+          <label>价格</label>
+          <div class="edit-product-value-row">
+            <input type="text" id="editProductPrice" class="input-field" inputmode="decimal" placeholder="可选">
+            <div id="editProductLastSales" class="sales-reference">上次销量：--</div>
+          </div>
+          <label>本次销量记录（可选）</label>
+          <div class="edit-product-value-row">
+            <input type="text" id="editProductSales" class="input-field" inputmode="numeric" placeholder="上传或粘贴图片后自动识别填写">
+            <div id="editProductSalesDelta" class="sales-delta is-empty">填写后显示增减</div>
+          </div>
+          <input type="file" id="editProductScreenshotInput" accept="image/*" hidden>
+          <div id="editProductPasteZone" class="edit-product-paste-zone" tabindex="0">📷 点击选择截图上传，或按 Ctrl+V 粘贴，OCR 自动识别销量</div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary modal-cancel">取消</button>
+            <button id="confirmEditProduct" class="btn btn-primary">保存商品与记录</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 批量记录弹窗 -->
+    <div id="batchRecordModal" class="modal batch-modal" style="display:none;">
+      <div class="modal-content">
+        <h3 style="margin-bottom:4px;">批量记录销量</h3>
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:8px;">填写需要记录的商品，留空的商品不记录</p>
+        <input type="text" id="batchSearchInput" class="input-field" placeholder="🔍 搜索商品标题..." style="margin-bottom:8px;">
+        <div id="batchRecordList" class="batch-record-list"></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary modal-cancel">取消</button>
+          <button id="confirmBatchRecord" class="btn btn-primary">保存选中</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 确认弹窗 -->
+    <div id="confirmModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3 id="confirmTitle" style="margin-bottom:12px;">确认</h3>
+        <p id="confirmMessage" style="color:var(--text-secondary);line-height:1.6;margin-bottom:16px;"></p>
+        <div class="modal-actions">
+          <button id="confirmCancelBtn" class="btn btn-secondary">取消</button>
+          <button id="confirmOkBtn" class="btn btn-danger">确定删除</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p id="loadingText">加载中...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js?v=31"></script>
+</body>
+</html>
+
