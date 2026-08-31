@@ -23,5 +23,4 @@ jobs:
           script_stop: true
           command_timeout: 15m
           script: |
-            curl -fsSL https://raw.githubusercontent.com/shichengpeng1-png/pdd-radar/main/deploy-server.sh -o /tmp/pdd-deploy.sh
-            bash /tmp/pdd-deploy.sh
+            curl -fsSL https://raw.githubusercontent.com/shichengpeng1-png/pdd-radar/main/deploy-server.sh | sed 's/\r$//' | bash
