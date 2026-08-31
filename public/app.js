@@ -2091,7 +2091,7 @@ function ensureStoreTooltip() {
   if (storeTooltipEl) return storeTooltipEl;
   storeTooltipEl = document.createElement('div');
   storeTooltipEl.id = 'storeChartTooltip';
-  storeTooltipEl.style.cssText = 'position:fixed;z-index:99999;display:none;max-width:340px;max-height:400px;overflow-y:auto;background:#11151c;color:#f8fafc;border:1px solid #2b3440;border-radius:10px;padding:12px;box-shadow:0 14px 30px rgba(0,0,0,.45);font-size:12px;line-height:1.55;pointer-events:none;';
+  storeTooltipEl.style.cssText = 'position:fixed;z-index:99999;display:none;width:min(440px,calc(100vw - 24px));max-height:min(70vh,560px);overflow-y:auto;background:#11151c;color:#f8fafc;border:1px solid #2b3440;border-radius:10px;padding:12px;box-shadow:0 14px 30px rgba(0,0,0,.45);font-size:12px;line-height:1.55;pointer-events:none;';
   document.body.appendChild(storeTooltipEl);
   return storeTooltipEl;
 }
@@ -2125,7 +2125,7 @@ function renderStoreSessionTooltip(context, sessions) {
     <div>时间: ${formatTime(session.time)}</div>
     <div style="margin-bottom:6px;">涉及商品: ${session.productCount} 个</div>
     <div style="max-height:260px;overflow-y:auto;border-top:1px solid #303744;padding-top:6px;">
-      ${allGrowths.map(pg => `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">¥${pg.productPrice || '—'} ${pg.productName}: ${Number(pg.salesGrowth) >= 0 ? '+' : ''}${formatNumber(pg.salesGrowth)}</div>`).join('')}
+      ${allGrowths.length ? allGrowths.map(pg => `<div style="padding:2px 0;word-break:break-all;">¥${pg.productPrice || '—'} ${pg.productName}: <strong style="color:${Number(pg.salesGrowth) >= 0 ? '#22c55e' : '#ef4444'};">${Number(pg.salesGrowth) >= 0 ? '+' : ''}${formatNumber(pg.salesGrowth)}</strong>${Number(pg.reviewsGrowth) ? `　评价 ${Number(pg.reviewsGrowth) >= 0 ? '+' : ''}${formatNumber(pg.reviewsGrowth)}` : ''}</div>`).join('') : '<div style="color:#9ca3af;">本次没有变化商品</div>'}
     </div>
   `;
 
@@ -2306,8 +2306,7 @@ function renderCustomSinceChart() {
   const ctx = document.getElementById('storeChart').getContext('2d');
   const products = data.products;
   const displayProducts = products
-    .filter(p => Number(p.salesGrowth) > 0)
-    .slice(0, 20);
+    .filter(p => Number(p.salesGrowth) > 0);
 
   if (!displayProducts.length) {
     if (container) container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;">当前时间范围内暂无正向销量增长，无法生成占比图</p>';
@@ -2344,7 +2343,7 @@ function renderCustomSinceChart() {
       plugins: {
         title: {
           display: true,
-          text: `距 ${data.summary.sinceTime ? data.summary.sinceTime.slice(0, 16) : '自定义时间'} 销量增长占比`,
+          text: `距 ${data.summary.sinceTime ? data.summary.sinceTime.slice(0, 16) : '自定义时间'} 销量增长占比（全部增长商品）`,
           color: '#e4e7ed',
           font: { size: 16 },
         },
