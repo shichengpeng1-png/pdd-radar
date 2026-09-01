@@ -1926,7 +1926,7 @@ function renderGrowthChart() {
     chartData = {
       labels,
       datasets: [
-        { label: '距上次增长销量', data: previousSalesGrowth, borderColor: accentColor, backgroundColor: accentBg, tension: 0.3, fill: true, pointRadius: 5, pointBackgroundColor: accentColor },
+        { label: '距首次增长销量', data: previousSalesGrowth, borderColor: accentColor, backgroundColor: accentBg, tension: 0.3, fill: true, pointRadius: 5, pointBackgroundColor: accentColor },
         { label: '距上次增长评价', data: previousReviewsGrowth, borderColor: warnColor, backgroundColor: warnBg, tension: 0.3, fill: false, pointRadius: 4, pointBackgroundColor: warnColor },
       ],
     };
