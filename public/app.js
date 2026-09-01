@@ -592,9 +592,9 @@ function renderProductList() {
   } else if (productSortMode === 'growth-asc') {
     filtered = [...filtered].sort((a, b) => (a.sales_growth || 0) - (b.sales_growth || 0));
   } else if (productSortMode === 'first-growth-desc') {
-    filtered = [...filtered].sort((a, b) => (b.first_growth || 0) - (a.first_growth || 0));
+    filtered = [...filtered].sort((a, b) => (b.sales_growth || 0) - (a.sales_growth || 0));
   } else if (productSortMode === 'first-growth-asc') {
-    filtered = [...filtered].sort((a, b) => (a.first_growth || 0) - (b.first_growth || 0));
+    filtered = [...filtered].sort((a, b) => (a.sales_growth || 0) - (b.sales_growth || 0));
   }
 
   list.innerHTML = filtered.map((p, index) => {
