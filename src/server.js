@@ -184,8 +184,17 @@ app.post('/api/products/:id/ocr-preview', upload.fields([
     if (!screenshot) return res.status(400).json({ success: false, error: '请粘贴图片' });
     if (!ocr.isConfigured()) return res.status(503).json({ success: false, error: 'OCR 服务暂不可用' });
     ocrTempPath = ocrImage?.path || '';
-    const recognized = await ocr.recognizeByFile(ocrImage?.path || screenshot.path);
-    const extracted = ocr.extractSalesFromOCRText(recognized.content);
+    let recognized = await ocr.recognizeByFile(ocrImage?.path || screenshot.path);
+    let extracted = ocr.extractSalesFromOCRText(recognized.content);
+    // 裁剪区域未识别到销量时，自动使用原图再试一次。
+    if (!extracted.salesText && ocrImage) {
+      const originalRecognized = await ocr.recognizeByFile(screenshot.path);
+      const originalExtracted = ocr.extractSalesFromOCRText(originalRecognized.content);
+      if (originalExtracted.salesText) {
+        recognized = originalRecognized;
+        extracted = originalExtracted;
+      }
+    }
     res.json({
       success: true,
       data: {
