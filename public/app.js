@@ -1905,11 +1905,18 @@ function renderGrowthChart() {
     return; // 跳过底部的 renderGrowthSummary
 
   } else if (chartType === 'cumulative') {
+    // 每一个点都表示相对上一条记录的变化，而非自首次记录的累计变化。
+    const previousSalesGrowth = data.records.map((_, index) =>
+      index === 0 ? 0 : Number(data.intervals[index - 1]?.salesGrowth || 0)
+    );
+    const previousReviewsGrowth = data.records.map((_, index) =>
+      index === 0 ? 0 : Number(data.intervals[index - 1]?.reviewsGrowth || 0)
+    );
     chartData = {
       labels,
       datasets: [
-        { label: '距首次销量增长', data: data.cumulative.map(d => d.salesGrowth), borderColor: accentColor, backgroundColor: accentBg, tension: 0.3, fill: true, pointRadius: 5, pointBackgroundColor: accentColor },
-        { label: '距首次评价增长', data: data.cumulative.map(d => d.reviewsGrowth), borderColor: warnColor, backgroundColor: warnBg, tension: 0.3, fill: false, pointRadius: 4, pointBackgroundColor: warnColor },
+        { label: '距上次增长销量', data: previousSalesGrowth, borderColor: accentColor, backgroundColor: accentBg, tension: 0.3, fill: true, pointRadius: 5, pointBackgroundColor: accentColor },
+        { label: '距上次增长评价', data: previousReviewsGrowth, borderColor: warnColor, backgroundColor: warnBg, tension: 0.3, fill: false, pointRadius: 4, pointBackgroundColor: warnColor },
       ],
     };
 
@@ -1918,14 +1925,15 @@ function renderGrowthChart() {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          title: { display: true, text: '距首次记录的销量增长趋势', color: '#e4e7ed', font: { size: 16 } },
+          title: { display: true, text: '距上次记录的销量增长趋势', color: '#e4e7ed', font: { size: 16 } },
           legend: { labels: { color: '#9ca3af' } },
           tooltip: { callbacks: { afterLabel: (c) => {
             const d = data.cumulative[c.dataIndex];
             const lines = [
               `当时销量: ${formatNumber(d.sales)}`,
               `当时评价: ${formatNumber(d.reviews)}`,
-              `距首次增长: ${d.salesGrowth >= 0 ? '+' : ''}${formatNumber(d.salesGrowth)}`,
+              `距上次增长销量: ${previousSalesGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(previousSalesGrowth[c.dataIndex])}`,
+              `距上次增长评价: ${previousReviewsGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(previousReviewsGrowth[c.dataIndex])}`,
             ];
             if (d.avgDailySalesGrowth !== null) {
               const sign = d.avgDailySalesGrowth >= 0 ? '+' : '';
