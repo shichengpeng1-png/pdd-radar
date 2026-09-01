@@ -1919,6 +1919,10 @@ function renderGrowthChart() {
     // 每个点相对首次记录计算，和“距首次销量增长趋势”的名称保持一致。
     const firstSalesGrowth = data.cumulative.map(item => Number(item.salesGrowth || 0));
     const firstReviewsGrowth = data.cumulative.map(item => Number(item.reviewsGrowth || 0));
+    // 悬浮提示中的“距上次”单独按相邻两条记录计算。
+    const previousSalesGrowth = data.records.map((_, index) =>
+      index === 0 ? 0 : Number(data.intervals[index - 1]?.salesGrowth || 0)
+    );
     chartData = {
       labels,
       datasets: [
@@ -1939,7 +1943,7 @@ function renderGrowthChart() {
             const lines = [
               `当时销量: ${formatNumber(d.sales)}`,
               `当时评价: ${formatNumber(d.reviews)}`,
-              `距上次增长销量: ${firstSalesGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(firstSalesGrowth[c.dataIndex])}`,
+              `距上次增长销量: ${previousSalesGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(previousSalesGrowth[c.dataIndex])}`,
               `距首次增长评价: ${firstReviewsGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(firstReviewsGrowth[c.dataIndex])}`,
             ];
             if (d.avgDailySalesGrowth !== null) {
