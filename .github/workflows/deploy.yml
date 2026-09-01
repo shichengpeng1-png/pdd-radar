@@ -46,5 +46,6 @@ jobs:
             rm -rf /tmp/pdd-radar-release
             mkdir -p /tmp/pdd-radar-release
             tar -xzf /tmp/pdd-radar-release.tar.gz -C /tmp/pdd-radar-release
+            sed -i 's/\r$//' /tmp/pdd-radar-release/deploy-server.sh
             bash /tmp/pdd-radar-release/deploy-server.sh /tmp/pdd-radar-release.tar.gz
 
