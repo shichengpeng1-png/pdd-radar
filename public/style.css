@@ -220,6 +220,23 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   background: var(--accent-light);
 }
 
+.list-item-index,
+.batch-record-index {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(59, 130, 246, 0.42);
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .list-item-info {
   flex: 1;
   min-width: 0;
@@ -526,6 +543,17 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   border-radius: 4px;
   padding: 2px 6px;
   white-space: nowrap;
+}
+
+.record-batch-number {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .record-growth-row {
