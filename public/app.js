@@ -1157,8 +1157,8 @@ async function handleBatchScreenshotPaste(event, item) {
     zone.classList.remove('processing');
     zone.classList.add('ready');
     zone.title = '点击查看本次上传的原始截图';
-    zone.innerHTML = `<img src="/screenshots/${data.screenshotFilename}" alt="本次上传截图">${cleanSalesText ? `已识别：${cleanSalesText}（点击查看大图）` : '图片已上传，点击查看后手动填写销量'}`;
-    showToast(cleanSalesText ? 'OCR 已自动回填销量' : '图片已上传，但未识别到销量', cleanSalesText ? 'success' : 'error');
+    zone.innerHTML = `<img src="/screenshots/${data.screenshotFilename}" alt="本次上传截图">${cleanSalesText ? `图片已上传，已自动填写销量：${cleanSalesText}（点击查看大图）` : '图片已上传，自动填写销量未完成，请重新粘贴清晰截图'}`;
+    showToast(cleanSalesText ? '图片已上传，已自动填写销量' : '图片已上传，但未识别到销量', cleanSalesText ? 'success' : 'error');
   } catch (err) {
     zone.classList.remove('processing');
     zone.textContent = '识别失败，点击后重新粘贴';
