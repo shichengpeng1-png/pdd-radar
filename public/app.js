@@ -147,6 +147,7 @@ function bindEvents() {
   try {
     document.getElementById('editProductBtn').addEventListener('click', openEditProductModal);
     document.getElementById('confirmEditProduct').addEventListener('click', handleEditProduct);
+    document.getElementById('openRecordListFromEdit').addEventListener('click', openRecordListFromEditModal);
     const editPasteZone = document.getElementById('editProductPasteZone');
     const editScreenshotInput = document.getElementById('editProductScreenshotInput');
     editPasteZone.addEventListener('click', (event) => {
@@ -799,6 +800,15 @@ function openEditProductModal() {
   pasteZone.textContent = '📷 点击选择截图上传，或按 Ctrl+V 粘贴，OCR 自动识别销量';
   showModal('editProductModal');
   setTimeout(() => pasteZone.focus(), 0);
+}
+
+// 从编辑弹窗直接进入当前商品的历史记录。
+function openRecordListFromEditModal() {
+  if (!currentProductId) return;
+  hideModal('editProductModal');
+  switchTab('records');
+  switchPanel('detail');
+  document.getElementById('recordList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function openExternalProductUrl(rawUrl) {
@@ -1467,12 +1477,13 @@ function renderRecords() {
 
       // 距首次记录的累计增长
       const cumulativeSalesGrowth = (r.sales_number || 0) - (first.sales_number || 0);
-      const cumulativeReviewsGrowth = (r.reviews_number || 0) - (first.reviews_number || 0);
       const cumSalesSign = cumulativeSalesGrowth >= 0 ? '+' : '';
-      const cumReviewsSign = cumulativeReviewsGrowth >= 0 ? '+' : '';
+      const firstTime = new Date(first.captured_at.replace(' ', 'T'));
+      const currentTime = new Date(r.captured_at.replace(' ', 'T'));
+      const sinceFirst = formatInterval(currentTime - firstTime);
       salesGrowthStr = `<div class="record-cumulative-row">
         <span class="record-growth-item ${cumulativeSalesGrowth > 0 ? 'growth-positive' : cumulativeSalesGrowth < 0 ? 'growth-negative' : ''}">距首次销量增长 ${cumSalesSign}${formatNumber(cumulativeSalesGrowth)}</span>
-        <span class="record-growth-item ${cumulativeReviewsGrowth > 0 ? 'growth-positive' : cumulativeReviewsGrowth < 0 ? 'growth-negative' : ''}">距首次评价增长 ${cumReviewsSign}${formatNumber(cumulativeReviewsGrowth)}</span>
+        <span class="record-growth-item">距首次相隔时间 ${sinceFirst}</span>
       </div>`;
     } else {
       // 第一条记录
