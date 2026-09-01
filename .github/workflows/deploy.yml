@@ -31,6 +31,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           source: ${{ runner.temp }}/pdd-radar-release.tar.gz
           target: /tmp
+          strip_components: 4
 
       - name: Update PDD Radar service
         uses: appleboy/ssh-action@v1.2.0
