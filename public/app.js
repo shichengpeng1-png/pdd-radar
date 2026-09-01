@@ -1939,7 +1939,7 @@ function renderGrowthChart() {
             const lines = [
               `当时销量: ${formatNumber(d.sales)}`,
               `当时评价: ${formatNumber(d.reviews)}`,
-              `距首次增长销量: ${firstSalesGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(firstSalesGrowth[c.dataIndex])}`,
+              `距上次增长销量: ${firstSalesGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(firstSalesGrowth[c.dataIndex])}`,
               `距首次增长评价: ${firstReviewsGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(firstReviewsGrowth[c.dataIndex])}`,
             ];
             if (d.avgDailySalesGrowth !== null) {
