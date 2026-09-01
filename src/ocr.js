@@ -123,8 +123,17 @@ function runTesseract(filePath, psm) {
 }
 
 async function recognizeByLocalTesseract(filePath) {
-  // 前端已裁剪并缩放为销量识别区域，只运行一个进程，避免连续粘贴时 CPU 排队。
-  const content = await runTesseract(filePath, 6);
+  // 先按文本块识别；未发现销量关键字时再用稀疏文本模式补一次，
+  // 以应对拼多多截图中数字和“已拼/已售”被拆成不同区域的情况。
+  let content = await runTesseract(filePath, 6);
+  if (!extractSalesFromOCRText(content).salesText) {
+    try {
+      const sparseContent = await runTesseract(filePath, 11);
+      if (sparseContent) content = `${content}\n${sparseContent}`;
+    } catch (_) {
+      // 保留首次识别结果，避免补充模式失败影响正常上传。
+    }
+  }
   if (!content) throw new Error('本地 OCR 未返回识别内容');
   return { requestId: `local-${Date.now()}`, content, words: [], provider: 'local-tesseract-fast' };
 }
