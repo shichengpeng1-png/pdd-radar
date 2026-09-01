@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Package release
-        run: tar --exclude=.git --exclude=node_modules --exclude=data --exclude=.env -czf pdd-radar-release.tar.gz .
+        run: tar --exclude=.git --exclude=node_modules --exclude=data --exclude=.env --exclude=./pdd-radar-release.tar.gz -czf pdd-radar-release.tar.gz .
 
       - name: Upload release to server
         uses: appleboy/scp-action@v1.0.0
