@@ -596,7 +596,7 @@ function renderProductList() {
     filtered = [...filtered].sort((a, b) => (a.first_growth || 0) - (b.first_growth || 0));
   }
 
-  list.innerHTML = filtered.map(p => {
+  list.innerHTML = filtered.map((p, index) => {
     const thumbFile = p.screenshot_filename || p.latest_screenshot;
     // 图片懒加载：不自动加载缩略图，点击才打开
     const thumb = thumbFile
@@ -612,6 +612,7 @@ function renderProductList() {
     }
     return `
     <div class="list-item ${p.id === currentProductId ? 'active' : ''}" data-id="${p.id}">
+      <span class="list-item-index" aria-label="第 ${index + 1} 个商品">${index + 1}</span>
       ${thumb}
       <div class="list-item-info">
         <div class="list-item-name">${p.price ? `<span style="color:var(--accent);font-weight:600;margin-right:6px;">¥${p.price}</span>` : ''}${p.name}</div>
@@ -1012,7 +1013,7 @@ function renderBatchList() {
   const batchProducts = batchSearchQuery
     ? products.filter(p => p.name.toLowerCase().includes(batchSearchQuery))
     : products;
-  listEl.innerHTML = batchProducts.map(p => {
+  listEl.innerHTML = batchProducts.map((p, index) => {
     const lastSales = p.latest_sales !== null && p.latest_sales !== undefined
       ? `上次: ${formatNumber(p.latest_sales)}`
       : '暂无记录';
@@ -1023,6 +1024,7 @@ function renderBatchList() {
     return `
       <div class="batch-record-item" data-product-id="${p.id}" data-last-sales="${p.latest_sales !== null && p.latest_sales !== undefined ? p.latest_sales : ''}">
         <div class="batch-record-item-head">
+          <span class="batch-record-index" aria-label="第 ${index + 1} 个商品">${index + 1}</span>
           <input type="text" class="input-field batch-price" placeholder="价格" value="${p.price || ''}" style="width:72px;flex-shrink:0;padding:4px 8px;font-size:13px;">
           ${thumb}
           <span class="batch-record-item-name" data-product-id="${p.id}">${p.name}</span>
@@ -1494,6 +1496,7 @@ function renderRecords() {
         <div class="record-item-time-row">
           <span class="record-item-time">${formatTime(r.captured_at)}</span>
           <span class="record-interval">${intervalStr}</span>
+          <span class="record-batch-number">第${ordIdx + 1}次记录</span>
         </div>
         <div class="record-item-stats">
           <div class="record-stat">
