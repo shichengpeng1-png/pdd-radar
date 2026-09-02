@@ -26,6 +26,14 @@ jobs:
             echo "Current application data:"
             ls -lh /opt/pdd-radar-v2-full/data/tracker.db 2>/dev/null || true
             echo ""
-            echo "Newest backup contents:"
-            latest_backup="$(ls -t /opt/pdd-radar-v2-backups/data-env-*.tar.gz | head -n 1)"
-            tar -tzf "$latest_backup" | sed -n '1,30p'
+            echo "Database contents in recent backups:"
+            for backup in $(ls -t /opt/pdd-radar-v2-backups/data-env-*.tar.gz | head -n 12); do
+              temp_dir=$(mktemp -d)
+              if tar -xzf "$backup" -C "$temp_dir" data/tracker.db 2>/dev/null && test -s "$temp_dir/data/tracker.db"; then
+                counts=$(node -e 'const Database=require("/opt/pdd-radar-v2-full/node_modules/better-sqlite3");const db=new Database(process.argv[1],{readonly:true});const q=t=>{try{return db.prepare("select count(*) n from "+t).get().n}catch(e){return "?"}};console.log("stores="+q("stores")+" products="+q("products")+" records="+q("records"));db.close()' "$temp_dir/data/tracker.db" 2>/dev/null || echo "database unreadable")
+                echo "$(basename "$backup"): $counts"
+              else
+                echo "$(basename "$backup"): no valid tracker.db"
+              fi
+              rm -rf "$temp_dir"
+            done
