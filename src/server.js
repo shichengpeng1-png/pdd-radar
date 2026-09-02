@@ -186,20 +186,24 @@ app.post('/api/products/:id/ocr-preview', upload.fields([
     ocrTempPath = ocrImage?.path || '';
     let recognized = await ocr.recognizeByFile(ocrImage?.path || screenshot.path);
     let extracted = ocr.extractSalesFromOCRText(recognized.content);
+    let priceText = ocr.extractPriceFromOCRText(recognized.content) || '';
     // 裁剪区域未识别到销量时，自动使用原图再试一次。
-    if (!extracted.salesText && ocrImage) {
+    if ((!extracted.salesText || !priceText) && ocrImage) {
       const originalRecognized = await ocr.recognizeByFile(screenshot.path);
       const originalExtracted = ocr.extractSalesFromOCRText(originalRecognized.content);
+      const originalPrice = ocr.extractPriceFromOCRText(originalRecognized.content) || '';
       if (originalExtracted.salesText) {
         recognized = originalRecognized;
         extracted = originalExtracted;
       }
+      if (!priceText && originalPrice) priceText = originalPrice;
     }
     res.json({
       success: true,
       data: {
         screenshotFilename: screenshot.filename,
         salesText: extracted.salesText || '',
+        priceText,
         ocrRaw: recognized.content || '',
       },
     });
