@@ -612,7 +612,253 @@ function renderProductList() {
       const g = p.sales_growth;
       const cls = g > 0 ? 'growth-positive' : g < 0 ? 'growth-negative' : '';
       const sign = g > 0 ? '+' : '';
-      growthHtml = `…14644 tokens truncated…: {
+      growthHtml = `<span class="sales ${cls}">新增${sign}${formatNumber(g)}</span>`;
+    }
+    return `
+    <div class="list-item ${p.id === currentProductId ? 'active' : ''}" data-id="${p.id}">
+      <span class="list-item-index" aria-label="第 ${index + 1} 个商品">${index + 1}</span>
+      ${thumb}
+      <div class="list-item-info">
+        <div class="list-item-name">${p.price ? `<span style="color:var(--accent);font-weight:600;margin-right:6px;">¥${p.price}</span>` : ''}${p.name}</div>
+        <div class="list-item-meta">
+          <span>${p.record_count || 0} 条记录</span>
+          ${p.latest_sales_text ? `<span class="sales">${p.latest_sales_text}</span>` : ''}
+          ${growthHtml}
+        </div>
+      </div>
+      <button class="list-item-copy" title="复制完整商品标题">复制标题</button>
+      <button class="list-item-product-edit">编辑</button>
+    </div>
+  `}).join('');
+}
+
+function handleOpenAddProduct() {
+  if (!currentStoreId) { showToast('请先选择店铺', 'error'); return; }
+  const store = stores.find(s => s.id === currentStoreId);
+  document.getElementById('addProductStoreName').textContent = '— ' + store.name;
+  document.getElementById('newProductName').value = '';
+  document.getElementById('newProductUrl').value = '';
+  showModal('addProductModal');
+}
+
+async function handleAddProduct() {
+  if (!currentStoreId) return;
+  const name = document.getElementById('newProductName').value.trim();
+  const pddUrl = document.getElementById('newProductUrl').value.trim();
+  if (!name) { showToast('请输入商品名称', 'error'); return; }
+
+  try {
+    const result = await API.post(`/api/stores/${currentStoreId}/products`, { name, pddUrl });
+    if (result.success) {
+      hideModal('addProductModal');
+      showToast('商品添加成功', 'success');
+      await loadProducts(currentStoreId);
+      selectProduct(result.data.id);
+    } else {
+      showToast(result.error || '添加失败', 'error');
+    }
+  } catch (err) {
+    showToast('添加失败: ' + err.message, 'error');
+  }
+}
+
+async function selectProduct(id) {
+  currentProductId = id;
+  const product = products.find(p => p.id === id);
+  if (!product) return;
+
+  const store = stores.find(s => s.id === currentStoreId);
+
+  // 第一步：立即切换面板 + 更新列表选中态（极轻量，同步执行）
+  // 先 switchTab('records') 再 switchPanel('detail')，避免 switchPanel 误触发图表加载
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('productDetail').style.display = 'block';
+  switchTab('records');
+  switchPanel('detail');
+
+  // 更新列表项 active 状态
+  document.querySelectorAll('#productList .list-item').forEach(el => {
+    el.classList.toggle('active', parseInt(el.dataset.id) === id);
+  });
+
+  // 第二步：用 rAF 延迟详情内容渲染，让面板切换先绘制到屏幕
+  requestAnimationFrame(() => {
+    document.getElementById('breadcrumb').textContent = `${store ? store.name : ''} >`;
+    document.getElementById('currentProductName').textContent = product.name;
+    document.getElementById('currentProductPrice').value = product.price || '';
+
+    const urlEl = document.getElementById('currentProductUrl');
+    const fetchBtn = document.getElementById('fetchSalesBtn');
+    if (product.pdd_url) {
+      urlEl.textContent = product.pdd_url;
+      urlEl.href = product.pdd_url;
+      urlEl.style.display = 'block';
+      if (fetchBtn) fetchBtn.style.display = 'inline-block';
+    } else {
+      urlEl.style.display = 'none';
+      if (fetchBtn) fetchBtn.style.display = 'none';
+    }
+
+    updateProductScreenshotDisplay(product);
+
+    // 显示加载中状态
+    const recordList = document.getElementById('recordList');
+    if (recordList) {
+      recordList.innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center;">加载中...</p>';
+    }
+
+    // 异步加载记录，不阻塞渲染
+    loadRecords(id);
+  });
+}
+
+function updateProductScreenshotDisplay(product) {
+  const img = document.getElementById('productScreenshotImg');
+  const placeholder = document.getElementById('productScreenshotPlaceholder');
+  const thumbFile = product.screenshot_filename || product.latest_screenshot;
+  if (thumbFile) {
+    const src = '/screenshots/' + thumbFile;
+    img.src = src;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+    img.onclick = () => viewImage('/screenshots/' + thumbFile);
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = 'flex';
+    img.onclick = null;
+  }
+}
+
+async function handleProductScreenshotUpload(file) {
+  if (!currentProductId) return;
+  if (!file.type.startsWith('image/')) { showToast('请上传图片文件', 'error'); return; }
+  if (file.size > 20 * 1024 * 1024) { showToast('图片大小不能超过20MB', 'error'); return; }
+
+  showLoading('正在上传商品截图...');
+  const formData = new FormData();
+  formData.append('screenshot', file);
+
+  try {
+    const result = await API.upload(`/api/products/${currentProductId}/screenshot`, formData);
+    hideLoading();
+    if (result.success) {
+      showToast('商品截图上传成功', 'success');
+      // 更新本地商品数据
+      const product = products.find(p => p.id === currentProductId);
+      if (product) product.screenshot_filename = result.data.screenshot_filename;
+      updateProductScreenshotDisplay(product);
+      renderProductList();
+    } else {
+      showToast(result.error || '上传失败', 'error');
+    }
+  } catch (err) {
+    hideLoading();
+    showToast('上传失败: ' + err.message, 'error');
+  }
+}
+
+async function handleDeleteProduct(id) {
+  const ok = await showConfirm('确定删除该商品及所有记录？此操作不可撤销。', '删除商品');
+  if (!ok) return;
+  try {
+    await API.del(`/api/products/${id}`);
+    showToast('商品已删除', 'success');
+    if (currentProductId === id) {
+      currentProductId = null;
+      showEmptyState();
+    }
+    await loadProducts(currentStoreId);
+
+…11644 tokens truncated…title: { display: true, text: '销量增长量', color: '#9ca3af' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+
+    // 显示自定义区间统计摘要
+    const sg = totalGrowth > 0 ? 'positive' : totalGrowth < 0 ? 'negative' : '';
+    const rg = totalReviewsGrowth > 0 ? 'positive' : totalReviewsGrowth < 0 ? 'negative' : '';
+    const avgDaily = daysDiff > 0 ? Math.round(totalGrowth / daysDiff) : null;
+    document.getElementById('growthSummary').innerHTML = `
+      <div class="growth-summary-card"><span class="label">起始记录</span><span class="value">第${startIdx}次</span></div>
+      <div class="growth-summary-card"><span class="label">结束记录</span><span class="value">第${endIdx}次</span></div>
+      <div class="growth-summary-card"><span class="label">区间天数</span><span class="value">${daysDiff} 天</span></div>
+      <div class="growth-summary-card"><span class="label">起始销量</span><span class="value">${formatNumber(selectedRecords[0].salesNumber)}</span></div>
+      <div class="growth-summary-card"><span class="label">结束销量</span><span class="value">${formatNumber(selectedRecords[selectedRecords.length - 1].salesNumber)}</span></div>
+      <div class="growth-summary-card"><span class="label">区间销量增长</span><span class="value ${sg}">${totalGrowth >= 0 ? '+' : ''}${formatNumber(totalGrowth)}</span></div>
+      <div class="growth-summary-card"><span class="label">区间评价增长</span><span class="value ${rg}">${totalReviewsGrowth >= 0 ? '+' : ''}${formatNumber(totalReviewsGrowth)}</span></div>
+      <div class="growth-summary-card"><span class="label">平均日增销量</span><span class="value ${sg}">${avgDaily !== null ? (avgDaily >= 0 ? '+' : '') + formatNumber(avgDaily) + '/天' : '-'}</span></div>
+      <div class="growth-summary-card"><span class="label">区间记录数</span><span class="value">${selectedRecords.length}</span></div>
+    `;
+    return; // 跳过底部的 renderGrowthSummary
+
+  } else if (chartType === 'cumulative') {
+    // 每个点相对首次记录计算，和“距首次销量增长趋势”的名称保持一致。
+    const firstSalesGrowth = data.cumulative.map(item => Number(item.salesGrowth || 0));
+    const firstReviewsGrowth = data.cumulative.map(item => Number(item.reviewsGrowth || 0));
+    // 悬浮提示中的“距上次”单独按相邻两条记录计算。
+    const previousSalesGrowth = data.records.map((_, index) =>
+      index === 0 ? 0 : Number(data.intervals[index - 1]?.salesGrowth || 0)
+    );
+    chartData = {
+      labels,
+      datasets: [
+        { label: '距首次增长销量', data: firstSalesGrowth, borderColor: accentColor, backgroundColor: accentBg, tension: 0.3, fill: true, pointRadius: 5, pointBackgroundColor: accentColor },
+        { label: '距首次增长评价', data: firstReviewsGrowth, borderColor: warnColor, backgroundColor: warnBg, tension: 0.3, fill: false, pointRadius: 4, pointBackgroundColor: warnColor },
+      ],
+    };
+
+    growthChartInstance = new Chart(ctx, {
+      type: 'line', data: chartData,
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: '距首次记录的销量增长趋势', color: '#e4e7ed', font: { size: 16 } },
+          legend: { labels: { color: '#9ca3af' } },
+          tooltip: { callbacks: { afterLabel: (c) => {
+            const d = data.cumulative[c.dataIndex];
+            const lines = [
+              `当时销量: ${formatNumber(d.sales)}`,
+              `当时评价: ${formatNumber(d.reviews)}`,
+              `距上次增长销量: ${previousSalesGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(previousSalesGrowth[c.dataIndex])}`,
+              `距首次增长评价: ${firstReviewsGrowth[c.dataIndex] >= 0 ? '+' : ''}${formatNumber(firstReviewsGrowth[c.dataIndex])}`,
+            ];
+            if (d.avgDailySalesGrowth !== null) {
+              const sign = d.avgDailySalesGrowth >= 0 ? '+' : '';
+              lines.push(`平均日增销量: ${sign}${formatNumber(Math.round(d.avgDailySalesGrowth))}/天`);
+              lines.push(`平均日增评价: ${d.avgDailyReviewsGrowth >= 0 ? '+' : ''}${formatNumber(Math.round(d.avgDailyReviewsGrowth))}/天`);
+              lines.push(`距首次: ${d.daysSinceFirst} 天`);
+            }
+            return lines;
+          }}}
+        },
+        scales: {
+          x: { ticks: { color: '#9ca3af', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { title: { display: true, text: '增长量', color: '#9ca3af' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+
+  } else if (chartType === 'total') {
+    chartData = { labels, datasets: [{ label: '总销量', data: data.records.map(r => r.salesNumber), borderColor: accentColor, backgroundColor: accentBg, tension: 0.3, fill: true, pointRadius: 5, pointBackgroundColor: accentColor }] };
+
+    growthChartInstance = new Chart(ctx, {
+      type: 'line', data: chartData,
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { title: { display: true, text: '商品总销量趋势', color: '#e4e7ed', font: { size: 16 } }, legend: { labels: { color: '#9ca3af' } } },
+        scales: {
+          x: { ticks: { color: '#9ca3af', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { title: { display: true, text: '销量', color: '#9ca3af' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+
+  } else if (chartType === 'reviews') {
+    chartData = { labels, datasets: [{ label: '商品评价', data: data.records.map(r => r.reviewsNumber), borderColor: warnColor, backgroundColor: warnBg, tension: 0.3, fill: true, pointRadius: 5, pointBackgroundColor: warnColor }] };
+
+    growthChartInstance = new Chart(ctx, {
+      type: 'line', data: chartData,
+      options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { title: { display: true, text: '商品评价趋势', color: '#e4e7ed', font: { size: 16 } }, legend: { labels: { color: '#9ca3af' } } },
         scales: {
