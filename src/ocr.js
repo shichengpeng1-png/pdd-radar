@@ -256,6 +256,21 @@ function extractAllPriceSalesPairs(content) {
 function extractPriceFromOCRText(content) {
   if (!content) return null;
 
+  // 拼多多截图常同时出现原价与券后价；优先取“券后”附近的价格，
+  // 避免把划线原价自动填写进商品价格。
+  const normalized = String(content)
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const couponPricePatterns = [
+    /(?:券后价?|领券后|优惠后|到手价?)\s*[:：]?[\s￥¥]*([0-9]+(?:\.[0-9]{1,2})?)/,
+    /(?:券后价?|领券后|优惠后|到手价?)\s*[￥¥]?\s*([0-9]+(?:\.[0-9]{1,2})?)/,
+  ];
+  for (const pattern of couponPricePatterns) {
+    const match = normalized.match(pattern);
+    if (match) return match[1].trim();
+  }
+
   // 匹配 ￥XX.XX 或 ¥XX.XX 格式
   const pricePatterns = [
     /[￥¥]\s*(\d+(?:\.\d+)?)/,
