@@ -262,6 +262,17 @@ function extractPriceFromOCRText(content) {
     .replace(/[\r\n\t]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+  // 商品页同时会显示“单独购买”价和“发起拼单”价。
+  // 保存时应优先使用“首件¥… 发起拼单”中的拼单价格。
+  const groupBuyPricePatterns = [
+    /(?:首件|拼单价?|发起拼单)\s*[:：]?\s*[￥¥]?\s*([0-9]+(?:\.[0-9]{1,2})?)/,
+  ];
+  for (const pattern of groupBuyPricePatterns) {
+    const match = normalized.match(pattern);
+    if (match) return match[1].trim();
+  }
+
   const couponPricePatterns = [
     /(?:券后价?|领券后|优惠后|到手价?)\s*[:：]?[\s￥¥]*([0-9]+(?:\.[0-9]{1,2})?)/,
     /(?:券后价?|领券后|优惠后|到手价?)\s*[￥¥]?\s*([0-9]+(?:\.[0-9]{1,2})?)/,
