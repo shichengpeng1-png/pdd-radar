@@ -1,0 +1,37 @@
+name: Restore PDD Radar Data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore verified data backup
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script_stop: true
+          command_timeout: 15m
+          script: |
+            set -eu
+            APP_DIR="/opt/pdd-radar-v2-full"
+            BACKUP_DIR="/opt/pdd-radar-v2-backups"
+            RESTORE_FILE="$BACKUP_DIR/data-env-20260902-115008.tar.gz"
+            SAFETY_FILE="$BACKUP_DIR/pre-restore-$(date +%Y%m%d-%H%M%S).tar.gz"
+
+            test -f "$RESTORE_FILE"
+            tar -tzf "$RESTORE_FILE" | grep -qx "data/tracker.db"
+            tar -C "$APP_DIR" -czf "$SAFETY_FILE" data .env
+            systemctl stop pdd-radar-v2.service
+            tar -C "$APP_DIR" -xzf "$RESTORE_FILE" data .env
+            systemctl start pdd-radar-v2.service
+            systemctl is-active --quiet pdd-radar-v2.service
+            echo "Restore completed from: $RESTORE_FILE"
+            echo "Safety backup created: $SAFETY_FILE"
