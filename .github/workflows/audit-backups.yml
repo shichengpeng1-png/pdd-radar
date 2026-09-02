@@ -26,6 +26,9 @@ jobs:
             echo "Current application data:"
             ls -lh /opt/pdd-radar-v2-full/data/tracker.db 2>/dev/null || true
             echo ""
+            echo "Current live database counts:"
+            node -e 'const Database=require("/opt/pdd-radar-v2-full/node_modules/better-sqlite3");const db=new Database("/opt/pdd-radar-v2-full/data/tracker.db",{readonly:true});const q=t=>db.prepare("select count(*) n from "+t).get().n;console.log("stores="+q("stores")+" products="+q("products")+" records="+q("records"));db.close()' || true
+            echo ""
             echo "Database contents in recent backups:"
             for backup in $(ls -t /opt/pdd-radar-v2-backups/data-env-*.tar.gz | head -n 12); do
               temp_dir=$(mktemp -d)
