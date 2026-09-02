@@ -1148,17 +1148,24 @@ async function handleBatchScreenshotPaste(event, item) {
     item.dataset.screenshotFilename = data.screenshotFilename || '';
     item.dataset.ocrRaw = data.ocrRaw || '';
     const cleanSalesText = String(data.salesText || '').replace(/件/g, '').trim();
+    const cleanPriceText = String(data.priceText || '').replace(/[￥¥元\s]/g, '').trim();
+    const priceInput = item.querySelector('.batch-price');
     if (cleanSalesText) {
       salesInput.value = cleanSalesText;
       salesInput.classList.add('ocr-filled');
+    }
+    if (cleanPriceText && /^\d+(?:\.\d{1,2})?$/.test(cleanPriceText)) {
+      priceInput.value = cleanPriceText;
+      priceInput.classList.add('ocr-filled');
     }
     const lastSales = item.dataset.lastSales === '' ? null : Number(item.dataset.lastSales);
     updateSalesDeltaDisplay(item.querySelector('.batch-sales-delta'), cleanSalesText, lastSales);
     zone.classList.remove('processing');
     zone.classList.add('ready');
     zone.title = '点击查看本次上传的原始截图';
-    zone.innerHTML = `<img src="/screenshots/${data.screenshotFilename}" alt="本次上传截图">${cleanSalesText ? `图片已上传，已自动填写销量：${cleanSalesText}（点击查看大图）` : '图片已上传，自动填写销量未完成，请重新粘贴清晰截图'}`;
-    showToast(cleanSalesText ? '图片已上传，已自动填写销量' : '图片已上传，但未识别到销量', cleanSalesText ? 'success' : 'error');
+    const filledFields = [cleanSalesText && `销量：${cleanSalesText}`, cleanPriceText && `价格：¥${cleanPriceText}`].filter(Boolean);
+    zone.innerHTML = `<img src="/screenshots/${data.screenshotFilename}" alt="本次上传截图">${filledFields.length ? `图片已上传，已自动填写${filledFields.join('，')}（点击查看大图）` : '图片已上传，自动填写销量和价格未完成，请重新粘贴清晰截图'}`;
+    showToast(filledFields.length ? `图片已上传，已自动填写${filledFields.join('，')}` : '图片已上传，但未识别到销量和价格', filledFields.length ? 'success' : 'error');
   } catch (err) {
     zone.classList.remove('processing');
     zone.textContent = '识别失败，点击后重新粘贴';
