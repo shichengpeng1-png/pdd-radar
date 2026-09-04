@@ -28,6 +28,14 @@ fi
 
 cd "$APP_DIR"
 npm install --omit=dev
+
+# OCR 使用简体中文语言包。部分服务器仅预装了 tesseract 主程序，
+# 会导致每次截图识别都以进程错误结束。
+if ! /usr/bin/tesseract --list-langs 2>/dev/null | grep -qx 'chi_sim'; then
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tesseract-ocr-chi-sim
+fi
+
 install -m 644 pdd-radar-v2.service /etc/systemd/system/pdd-radar-v2.service
 systemctl daemon-reload
 systemctl enable --now pdd-radar-v2.service
