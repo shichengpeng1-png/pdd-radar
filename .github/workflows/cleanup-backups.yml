@@ -24,7 +24,22 @@ jobs:
           script: |
             set -euo pipefail
             BACKUP_DIR=/opt/pdd-radar-v2-backups
-            mapfile -t archives < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name '*.tar.gz' -printf '%T@ %p\n' | sort -nr | cut -d' ' -f2-)
+            archives=("$BACKUP_DIR"/*.tar.gz)
+            if [ ! -e "${archives[0]}" ]; then exit 0; fi
+            IFS=
+            for archive in "${archives[@]}"; do
+              if tar -tzf "$archive" >/dev/null 2>&1 && [ "$kept" -lt 3 ]; then
+                echo "保留有效备份: $archive"
+                kept=$((kept + 1))
+              else
+                echo "删除旧或损坏备份: $archive"
+                rm -f -- "$archive"
+              fi
+            done
+            df -h /
+            ls -lht "$BACKUP_DIR"
+\n' archives=($(ls -1t "$BACKUP_DIR"/*.tar.gz))
+            unset IFS
             kept=0
             for archive in "${archives[@]}"; do
               if tar -tzf "$archive" >/dev/null 2>&1 && [ "$kept" -lt 3 ]; then
