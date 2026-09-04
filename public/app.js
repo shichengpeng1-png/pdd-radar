@@ -844,6 +844,13 @@ function refreshEmbeddedWeb() {
   frame.src = input.value;
 }
 
+function openEmbeddedWebLogin() {
+  const url = document.getElementById('embeddedWebUrl')?.value;
+  if (!url) return;
+  window.open(url, '_blank', 'noopener,noreferrer');
+  showToast('请在新标签页完成扫码登录，完成后回到这里点击刷新');
+}
+
 function handleVisitEditProductUrl() {
   openExternalProductUrl(document.getElementById('editProductUrl')?.value);
 }
