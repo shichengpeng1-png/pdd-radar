@@ -815,7 +815,11 @@ function openExternalProductUrl(rawUrl) {
   let url = String(rawUrl || '').trim();
   if (!url) { showToast('该商品暂未设置网址', 'error'); return; }
   if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
-  window.open(url, '_blank', 'noopener,noreferrer');
+  const panel = document.getElementById('embeddedWebPanel');
+  const frame = document.getElementById('embeddedWebFrame');
+  if (!panel || !frame) return;
+  frame.src = url;
+  panel.style.display = 'flex';
 }
 
 function handleVisitEditProductUrl() {
@@ -1087,8 +1091,7 @@ function renderBatchList() {
       e.stopPropagation();
       const product = products.find(p => p.id === parseInt(btn.dataset.productId));
       if (!product?.pdd_url) return;
-      const href = /^https?:\/\//i.test(product.pdd_url) ? product.pdd_url : `https://${product.pdd_url}`;
-      window.open(href, '_blank', 'noopener');
+      openExternalProductUrl(product.pdd_url);
     });
   });
 
