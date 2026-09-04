@@ -16,6 +16,15 @@ if [ -d "$APP_DIR" ]; then
   tar -C "$APP_DIR" -czf "$BACKUP_DIR/data-env-$STAMP.tar.gz" data .env 2>/dev/null || true
 fi
 
+# 仅保留最近 3 份发布前备份，避免截图备份持续累积占满服务器磁盘。
+backup_count=0
+for backup_file in $(ls -1t "$BACKUP_DIR"/data-env-*.tar.gz 2>/dev/null || true); do
+  backup_count=$((backup_count + 1))
+  if [ "$backup_count" -gt 3 ]; then
+    rm -f -- "$backup_file"
+  fi
+done
+
 # 代码由 GitHub Actions 通过 SSH 传入，服务器无需访问 GitHub。
 mkdir -p "$APP_DIR"
 tar -xzf "$RELEASE_ARCHIVE" -C "$APP_DIR"
