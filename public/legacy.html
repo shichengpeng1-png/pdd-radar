@@ -354,6 +354,11 @@
         <span>商品网页</span>
         <button type="button" class="embedded-web-panel-close" onclick="document.getElementById('embeddedWebPanel').style.display='none';document.getElementById('embeddedWebFrame').src='about:blank';" aria-label="关闭网页">✕</button>
       </div>
+      <div class="embedded-web-toolbar">
+        <input id="embeddedWebUrl" class="embedded-web-url" readonly aria-label="当前网址" placeholder="当前网址">
+        <button type="button" class="embedded-web-action" onclick="copyEmbeddedWebUrl()">复制</button>
+        <button type="button" class="embedded-web-action" onclick="refreshEmbeddedWeb()">刷新</button>
+      </div>
       <iframe id="embeddedWebFrame" class="embedded-web-frame" title="商品网页" referrerpolicy="no-referrer"></iframe>
     </aside>
 
@@ -377,7 +382,7 @@
     </div>
   </div>
 
-  <script src="/app.js?v=44"></script>
+  <script src="/app.js?v=45"></script>
 </body>
 </html>
 
