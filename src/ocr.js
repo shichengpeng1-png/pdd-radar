@@ -114,10 +114,11 @@ function recognizeByAliyun(filePath) {
 
 function runTesseract(filePath, psm) {
   return new Promise((resolve, reject) => {
-    execFile('/usr/bin/tesseract', [filePath, 'stdout', '-l', 'chi_sim+eng', '--psm', String(psm)],
-      { timeout: 20000, maxBuffer: 8 * 1024 * 1024, encoding: 'utf8', env: { ...process.env, OMP_THREAD_LIMIT: '2' } },
+    // 销量截图只需识别中文与数字；不加载英文模型可显著降低 2 vCPU 服务器的耗时。
+    execFile('/usr/bin/tesseract', [filePath, 'stdout', '-l', 'chi_sim', '--psm', String(psm)],
+      { timeout: 45000, maxBuffer: 8 * 1024 * 1024, encoding: 'utf8', env: { ...process.env, OMP_THREAD_LIMIT: '2' } },
       (error, stdout, stderr) => error
-        ? reject(new Error(`本地 OCR 识别失败: ${(stderr || error.message || '').trim()}`))
+        ? reject(new Error(`本地 OCR 识别失败${error.killed ? '（识别超时）' : ''}: ${(stderr || error.message || '').trim()}`))
         : resolve(stdout || ''));
   });
 }
