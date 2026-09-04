@@ -13,7 +13,7 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Keep only the latest three valid backups
+      - name: Remove backups older than today
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -22,17 +22,9 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           script_stop: true
           script: |
-            set -euo pipefail
+            set -eu
             BACKUP_DIR=/opt/pdd-radar-v2-backups
-            kept=0
-            for archive in $(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null || true); do
-              if tar -tzf "$archive" >/dev/null 2>&1 && [ "$kept" -lt 3 ]; then
-                echo "保留有效备份: $archive"
-                kept=$((kept + 1))
-              else
-                echo "删除旧或损坏备份: $archive"
-                rm -f -- "$archive"
-              fi
-            done
+            echo "删除 9 月 2 日及以前的旧备份；保留今天全部备份。"
+            find "$BACKUP_DIR" -maxdepth 1 -type f -name '*.tar.gz' -daystart -mtime +0 -print -delete
             df -h /
-            ls -lht "$BACKUP_DIR"
+            ls -lht "$BACKUP_DIR" | head -n 12
