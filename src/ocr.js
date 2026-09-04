@@ -130,13 +130,23 @@ async function recognizeByLocalTesseract(filePath) {
   return { requestId: `local-${Date.now()}`, content, words: [], provider: 'local-tesseract-fast' };
 }
 
-// 本地 OCR 优先，避免已过期的云服务为每张图片增加网络等待；本地不可用时再尝试阿里云。
+// 本地 OCR 优先；本地程序或语言包偶发异常时自动降级到阿里云，
+// 避免一张截图因 tesseract 进程报错而导致整次上传失败。
 async function recognizeByFile(filePath) {
-  if (fs.existsSync('/usr/bin/tesseract')) return recognizeByLocalTesseract(filePath);
+  let localError = null;
+  if (fs.existsSync('/usr/bin/tesseract')) {
+    try {
+      return await recognizeByLocalTesseract(filePath);
+    } catch (error) {
+      localError = error;
+      console.warn('[OCR] 本地识别失败，尝试阿里云兜底：', error.message);
+    }
+  }
   if (ACCESS_KEY_ID && ACCESS_KEY_SECRET) {
     const result = await recognizeByAliyun(filePath);
     return { ...result, provider: 'aliyun' };
   }
+  if (localError) throw localError;
   throw new Error('OCR 服务不可用：阿里云未配置且本地 OCR 未安装');
 }
 
