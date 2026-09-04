@@ -860,7 +860,8 @@ async function createOptimizedOcrImage(file) {
     // 拼多多截图的“已拼/已售”位于主图下方，只识别下半部分的价格与销量区域。
     const sourceY = Math.max(0, Math.round(bitmap.height * 0.45));
     const sourceHeight = Math.max(1, bitmap.height - sourceY);
-    const targetWidth = Math.min(900, bitmap.width);
+    // 本地中文 OCR 在小服务器上对超大截图很慢；640px 足以识别销量文字和数字。
+    const targetWidth = Math.min(640, bitmap.width);
     const scale = targetWidth / bitmap.width;
     const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
     const canvas = document.createElement('canvas');
@@ -871,7 +872,7 @@ async function createOptimizedOcrImage(file) {
     context.fillRect(0, 0, targetWidth, targetHeight);
     context.drawImage(bitmap, 0, sourceY, bitmap.width, sourceHeight, 0, 0, targetWidth, targetHeight);
     bitmap.close?.();
-    return await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.86));
+    return await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
   } catch (error) {
     console.warn('[PDD Tracker] OCR 图片优化失败，使用原图识别:', error);
     return null;
