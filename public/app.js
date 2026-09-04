@@ -815,13 +815,7 @@ function openExternalProductUrl(rawUrl) {
   let url = String(rawUrl || '').trim();
   if (!url) { showToast('该商品暂未设置网址', 'error'); return; }
   if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
-  const panel = document.getElementById('embeddedWebPanel');
-  const frame = document.getElementById('embeddedWebFrame');
-  const urlInput = document.getElementById('embeddedWebUrl');
-  if (!panel || !frame || !urlInput) return;
-  urlInput.value = url;
-  frame.src = url;
-  panel.style.display = 'flex';
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 async function copyEmbeddedWebUrl() {
