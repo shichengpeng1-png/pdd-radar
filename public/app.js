@@ -817,9 +817,31 @@ function openExternalProductUrl(rawUrl) {
   if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
   const panel = document.getElementById('embeddedWebPanel');
   const frame = document.getElementById('embeddedWebFrame');
-  if (!panel || !frame) return;
+  const urlInput = document.getElementById('embeddedWebUrl');
+  if (!panel || !frame || !urlInput) return;
+  urlInput.value = url;
   frame.src = url;
   panel.style.display = 'flex';
+}
+
+async function copyEmbeddedWebUrl() {
+  const input = document.getElementById('embeddedWebUrl');
+  const url = input?.value || '';
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch (_) {
+    input.select();
+    document.execCommand('copy');
+  }
+  showToast('当前网址已复制');
+}
+
+function refreshEmbeddedWeb() {
+  const input = document.getElementById('embeddedWebUrl');
+  const frame = document.getElementById('embeddedWebFrame');
+  if (!input?.value || !frame) return;
+  frame.src = input.value;
 }
 
 function handleVisitEditProductUrl() {
