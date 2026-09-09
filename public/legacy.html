@@ -276,9 +276,10 @@
     <!-- 截图查看弹窗 -->
     <div id="imageModal" class="modal" style="display:none;">
       <div class="modal-content modal-image-viewer">
-        <button id="deleteImageRecordBtn" class="image-delete-btn" title="删除这条记录" aria-label="删除这条记录" style="display:none;">🗑</button>
-        <button id="closeImageModal" class="btn btn-secondary modal-close-btn">✕</button>
-        <img id="modalImage" class="modal-image" alt="截图">
+        <div class="modal-image-stage">
+          <img id="modalImage" class="modal-image" alt="截图">
+          <button id="closeImageModal" class="btn btn-secondary modal-close-btn">✕</button>
+        </div>
       </div>
     </div>
 
