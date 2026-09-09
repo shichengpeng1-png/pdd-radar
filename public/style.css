@@ -954,6 +954,26 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   z-index: 10;
 }
 
+.image-delete-btn {
+  position: absolute;
+  top: 16px;
+  right: 62px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  background: rgba(127, 29, 29, 0.9);
+  color: #f87171;
+  font-size: 17px;
+  line-height: 1;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.image-delete-btn:hover { background: #b91c1c; color: #fff; }
+
 .modal-form {
   display: flex;
   flex-direction: column;
