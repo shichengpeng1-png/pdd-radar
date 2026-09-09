@@ -6,6 +6,7 @@ let products = [];
 let records = [];
 let growthChartInstance = null;
 let editingRecordId = null;
+let viewingRecordId = null;
 let editingStoreId = null;
 let productSearchQuery = '';
 let batchSearchQuery = '';
@@ -283,6 +284,14 @@ function bindEvents() {
   // 截图查看
   try {
     document.getElementById('closeImageModal').addEventListener('click', () => hideModal('imageModal'));
+    document.getElementById('deleteImageRecordBtn').addEventListener('click', async () => {
+      if (!viewingRecordId) return;
+      const recordId = viewingRecordId;
+      const ok = await showConfirm('确定删除这条记录及其截图？', '删除记录');
+      if (!ok) return;
+      await handleDeleteRecord(recordId);
+      hideModal('imageModal');
+    });
   } catch (e) { console.error('[PDD Tracker] 截图查看事件绑定失败:', e); }
 
   // 编辑记录
@@ -398,7 +407,7 @@ function bindEvents() {
 
       if (action === 'view-screenshot') {
         const screenshot = el.dataset.screenshot;
-        if (screenshot) viewImage('/screenshots/' + screenshot);
+        if (screenshot) viewImage('/screenshots/' + screenshot, recordId);
       } else if (action === 'edit') {
         openEditRecord(recordId);
       } else if (action === 'delete') {
@@ -2545,7 +2554,10 @@ function formatNumber(n) {
   return n.toString();
 }
 
-function viewImage(src) {
+function viewImage(src, recordId = null) {
+  viewingRecordId = recordId;
+  const deleteBtn = document.getElementById('deleteImageRecordBtn');
+  if (deleteBtn) deleteBtn.style.display = recordId ? 'inline-flex' : 'none';
   document.getElementById('modalImage').src = src;
   showModal('imageModal');
 }
