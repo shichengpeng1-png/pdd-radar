@@ -941,6 +941,13 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   justify-content: center;
 }
 
+.modal-image-stage {
+  position: relative;
+  display: inline-flex;
+  max-width: calc(100% - 48px);
+  max-height: 90vh;
+}
+
 .modal-image {
   max-width: 100%;
   max-height: 90vh;
@@ -949,30 +956,10 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 .modal-close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 0;
+  left: calc(100% + 8px);
   z-index: 10;
 }
-
-.image-delete-btn {
-  position: absolute;
-  top: 16px;
-  right: 62px;
-  z-index: 10;
-  width: 36px;
-  height: 36px;
-  border: 1px solid #ef4444;
-  border-radius: 6px;
-  background: rgba(127, 29, 29, 0.9);
-  color: #f87171;
-  font-size: 17px;
-  line-height: 1;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.image-delete-btn:hover { background: #b91c1c; color: #fff; }
 
 .modal-form {
   display: flex;
