@@ -15,6 +15,7 @@ let editProductScreenshotFilename = '';
 let editProductOcrRaw = '';
 let _storeGrowthSinceData = null;
 let storeTooltipEl = null;
+let storeProductTooltipEl = null;
 
 // ==================== 全局错误处理 ====================
 window.addEventListener('error', (e) => {
@@ -2149,6 +2150,50 @@ function hideStoreTooltip() {
   ensureStoreTooltip().style.display = 'none';
 }
 
+function ensureStoreProductTooltip() {
+  if (storeProductTooltipEl) return storeProductTooltipEl;
+  storeProductTooltipEl = document.createElement('div');
+  storeProductTooltipEl.id = 'storeProductChartTooltip';
+  storeProductTooltipEl.style.cssText = 'position:fixed;z-index:99999;display:none;width:min(300px,calc(100vw - 24px));background:#11151c;color:#f8fafc;border:1px solid #2b3440;border-radius:10px;padding:12px;box-shadow:0 14px 30px rgba(0,0,0,.45);font-size:12px;line-height:1.55;pointer-events:auto;';
+  document.body.appendChild(storeProductTooltipEl);
+  return storeProductTooltipEl;
+}
+
+function hideStoreProductTooltip() {
+  if (storeProductTooltipEl) storeProductTooltipEl.style.display = 'none';
+}
+
+function renderStoreProductTooltip(context, displayProducts, totalSales) {
+  const tooltip = context.tooltip;
+  const tip = ensureStoreProductTooltip();
+  if (!tooltip || tooltip.opacity === 0) {
+    tip.style.display = 'none';
+    return;
+  }
+  const point = tooltip.dataPoints?.[0];
+  const product = point ? displayProducts[point.dataIndex] : null;
+  if (!product) {
+    tip.style.display = 'none';
+    return;
+  }
+  const share = totalSales > 0 ? ((Number(product.salesGrowth || 0) / totalSales) * 100).toFixed(1) : '0.0';
+  const hasUrl = Boolean(String(product.productUrl || '').trim());
+  tip.innerHTML = `
+    <div style="font-weight:700;margin-bottom:5px;word-break:break-all;">${product.productName}</div>
+    <div>占比: ${share}%</div>
+    <div>基线销量: ${formatNumber(product.baselineSales)}</div>
+    <div>当前销量: ${formatNumber(product.currentSales)}</div>
+    <div>销量增长: <strong style="color:#22c55e;">+${formatNumber(product.salesGrowth)}</strong></div>
+    <button type="button" class="store-product-link-btn" ${hasUrl ? '' : 'disabled'} style="margin-top:8px;width:100%;border:1px solid #3b82f6;border-radius:6px;background:#1d4ed8;color:#fff;padding:6px 8px;cursor:${hasUrl ? 'pointer' : 'not-allowed'};opacity:${hasUrl ? '1' : '.5'};">🔗 访问链接</button>
+  `;
+  const linkButton = tip.querySelector('.store-product-link-btn');
+  if (linkButton && hasUrl) linkButton.onclick = () => openExternalProductUrl(product.productUrl);
+  tip.style.display = 'block';
+  const rect = context.chart.canvas.getBoundingClientRect();
+  tip.style.left = `${Math.min(window.innerWidth - tip.offsetWidth - 12, rect.left + tooltip.caretX + 18)}px`;
+  tip.style.top = `${Math.max(12, rect.top + tooltip.caretY - 24)}px`;
+}
+
 function renderStoreSessionTooltip(context, sessions) {
   const tooltip = context.tooltip;
   const tip = ensureStoreTooltip();
@@ -2191,6 +2236,7 @@ function renderStoreChart() {
   }
 
   const chartType = document.getElementById('storeChartType').value;
+  hideStoreProductTooltip();
 
   // 自定义时间增长图表单独处理
   if (chartType === 'customSince') {
@@ -2370,6 +2416,7 @@ function renderCustomSinceChart() {
   const palette = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#a855f7','#14b8a6','#f97316','#eab308','#ec4899','#6366f1','#84cc16','#06b6d4','#fb7185','#8b5cf6','#10b981','#f43f5e','#0ea5e9','#d946ef','#65a30d','#facc15'];
 
   hideStoreTooltip();
+  hideStoreProductTooltip();
 
   storeChartInstance = new Chart(ctx, {
     type: 'doughnut',
@@ -2398,19 +2445,8 @@ function renderCustomSinceChart() {
         },
         legend: { labels: { color: '#9ca3af', boxWidth: 12 }, position: 'right' },
         tooltip: {
-          callbacks: {
-            label: (c) => {
-              const p = displayProducts[c.dataIndex];
-              const share = totalSales > 0 ? ((Number(p.salesGrowth || 0) / totalSales) * 100).toFixed(1) : '0.0';
-              return [
-                `${p.productName}`,
-                `占比: ${share}%`,
-                `基线销量: ${formatNumber(p.baselineSales)}`,
-                `当前销量: ${formatNumber(p.currentSales)}`,
-                `销量增长: +${formatNumber(p.salesGrowth)}`,
-              ];
-            }
-          }
+          enabled: false,
+          external: (context) => renderStoreProductTooltip(context, displayProducts, totalSales),
         },
       }
     }
