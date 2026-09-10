@@ -399,7 +399,7 @@ function getStoreGrowthData(storeId) {
 
   // 获取该店铺所有商品的所有记录
   const records = d.prepare(`
-    SELECT r.*, p.name as product_name, p.price as product_price
+    SELECT r.*, p.name as product_name, p.price as product_price, p.pdd_url as product_url
     FROM records r
     JOIN products p ON r.product_id = p.id
     WHERE p.store_id = ?
@@ -590,6 +590,7 @@ function getStoreGrowthSinceTime(storeId, sinceTime) {
     const recs = productRecords[pid];
     const productName = recs[0].product_name;
     const productPrice = recs[0].product_price;
+    const productUrl = recs[0].product_url;
 
     // 找到 selected time 之后最近的一条记录作为"当前值"
     // 如果没有 since 之后的记录，跳过该商品
@@ -628,6 +629,7 @@ function getStoreGrowthSinceTime(storeId, sinceTime) {
       productId: parseInt(pid),
       productName,
       productPrice,
+      productUrl,
       baselineSales,
       currentSales,
       salesGrowth: sg,
