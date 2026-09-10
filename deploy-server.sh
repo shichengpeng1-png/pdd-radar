@@ -32,11 +32,6 @@ mkdir -p "$APP_DIR"
 tar -xzf "$RELEASE_ARCHIVE" -C "$APP_DIR"
 rm -f "$RELEASE_ARCHIVE"
 
-latest_backup="$(ls -t "$BACKUP_DIR"/data-env-*.tar.gz 2>/dev/null | head -n 1 || true)"
-if [ -n "$latest_backup" ]; then
-  tar -C "$APP_DIR" -xzf "$latest_backup" || true
-fi
-
 cd "$APP_DIR"
 npm install --omit=dev
 
