@@ -13,7 +13,9 @@ fi
 
 mkdir -p "$BACKUP_DIR"
 if [ -d "$APP_DIR" ]; then
-  tar -C "$APP_DIR" -czf "$BACKUP_DIR/data-env-$STAMP.tar.gz" data .env 2>/dev/null || true
+  # 发布包不会覆盖 data 目录，截图会原地保留；只备份数据库和配置，
+  # 避免压缩大量截图导致 GitHub Actions 部署超时。
+  tar -C "$APP_DIR" -czf "$BACKUP_DIR/data-env-$STAMP.tar.gz" data/tracker.db .env 2>/dev/null || true
 fi
 
 # 仅保留最近 3 份发布前备份，避免截图备份持续累积占满服务器磁盘。
