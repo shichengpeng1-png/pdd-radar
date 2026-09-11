@@ -2449,10 +2449,19 @@ function renderCustomSinceChart() {
         legend: { display: false },
         tooltip: {
           callbacks: {
+            title: (items) => {
+              const product = displayProducts[items[0]?.dataIndex];
+              return product ? `¥${product.productPrice || '—'} ${product.productName}` : '';
+            },
             label: (ctx) => {
               const product = displayProducts[ctx.dataIndex];
-              const share = totalSales > 0 ? ((Number(product.salesGrowth || 0) / totalSales) * 100).toFixed(1) : '0.0';
-              return `${product.productName}: ${share}%（销量增长 +${formatNumber(product.salesGrowth)}）`;
+              if (!product) return '';
+              return [
+                product.productName,
+                `基线销量: ${formatNumber(product.baselineSales)}`,
+                `当前销量: ${formatNumber(product.currentSales)}`,
+                `销量增长: +${formatNumber(product.salesGrowth)}`,
+              ];
             }
           }
         },
