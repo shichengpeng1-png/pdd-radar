@@ -2491,6 +2491,7 @@ function renderCustomSinceChart() {
                 `基线销量: ${formatNumber(product.baselineSales)}`,
                 `当前销量: ${formatNumber(product.currentSales)}`,
                 `销量增长: +${formatNumber(product.salesGrowth)}`,
+                `占比: ${totalSales > 0 ? ((Number(product.salesGrowth || 0) / totalSales) * 100).toFixed(1) : '0.0'}%`,
               ];
             }
           }
