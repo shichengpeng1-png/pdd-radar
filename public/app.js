@@ -2441,14 +2441,12 @@ function renderCustomSinceChart() {
       name.className = 'custom-since-product-legend-name';
       name.textContent = `¥${product.productPrice || '—'} ${product.productName || '未命名商品'}`;
 
-      const listedProduct = products.find(item => Number(item.id) === Number(product.productId));
-      const productUrl = String(listedProduct?.pdd_url || product.productUrl || '').trim();
       const linkBtn = document.createElement('button');
       linkBtn.type = 'button';
       linkBtn.className = 'custom-since-product-link-btn';
-      linkBtn.textContent = '访问网址';
-      linkBtn.title = productUrl ? '访问该商品的网址' : '该商品暂未设置网址';
-      if (productUrl) {
+      linkBtn.textContent = '看详情';
+      linkBtn.title = '新标签页打开该商品详情';
+      if (product.productId) {
         linkBtn.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
