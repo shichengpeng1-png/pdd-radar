@@ -818,6 +818,12 @@ function openExternalProductUrl(rawUrl) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+// 圆形图中的入口始终优先使用商品列表当前保存的网址，避免统计数据与商品链接不同步。
+function openChartProductUrl(productId, fallbackUrl) {
+  const listedProduct = products.find(product => Number(product.id) === Number(productId));
+  openExternalProductUrl(listedProduct?.pdd_url || fallbackUrl);
+}
+
 async function copyEmbeddedWebUrl() {
   const input = document.getElementById('embeddedWebUrl');
   const url = input?.value || '';
@@ -2403,18 +2409,20 @@ function renderCustomSinceChart() {
       name.className = 'custom-since-product-legend-name';
       name.textContent = `¥${product.productPrice || '—'} ${product.productName || '未命名商品'}`;
 
-      const productUrl = String(product.productUrl || '').trim();
-      // 使用原生链接而不是 window.open，避免浏览器把访问操作当作弹窗拦截。
-      const linkBtn = document.createElement(productUrl ? 'a' : 'button');
+      const listedProduct = products.find(item => Number(item.id) === Number(product.productId));
+      const productUrl = String(listedProduct?.pdd_url || product.productUrl || '').trim();
+      const linkBtn = document.createElement('button');
+      linkBtn.type = 'button';
       linkBtn.className = 'custom-since-product-link-btn';
       linkBtn.textContent = '访问网址';
       linkBtn.title = productUrl ? '访问该商品的网址' : '该商品暂未设置网址';
       if (productUrl) {
-        linkBtn.href = /^https?:\/\//i.test(productUrl) ? productUrl : `https://${productUrl}`;
-        linkBtn.target = '_blank';
-        linkBtn.rel = 'noopener noreferrer';
+        linkBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openChartProductUrl(product.productId, productUrl);
+        });
       } else {
-        linkBtn.type = 'button';
         linkBtn.disabled = true;
       }
 
