@@ -2430,7 +2430,6 @@ function renderCustomSinceChart() {
     displayProducts.forEach((product, index) => {
       const item = document.createElement('div');
       item.className = 'custom-since-product-legend-item';
-      item.title = product.productName || '';
       item.tabIndex = 0;
 
       const color = document.createElement('span');
@@ -2471,6 +2470,15 @@ function renderCustomSinceChart() {
       item.addEventListener('click', (event) => {
         if (event.target.closest('a, button')) return;
         highlightProduct();
+      });
+      item.addEventListener('mouseenter', highlightProduct);
+      item.addEventListener('mouseleave', () => {
+        const chart = storeChartInstance;
+        if (!chart) return;
+        chart.setActiveElements([]);
+        chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+        chart.update();
+        item.classList.remove('is-active');
       });
       item.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
