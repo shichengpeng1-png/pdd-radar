@@ -1887,7 +1887,7 @@ function renderGrowthChart() {
           legend: { display: false },
           tooltip: { callbacks: { afterLabel: (c) => {
             const d = intervalData[c.dataIndex];
-            return [`时间: ${formatTime(d.fromTime)} → ${formatTime(d.toTime)}`, `前次: ${d.fromSales}`, `本次: ${d.toSales}`, `评价增长: ${d.reviewsGrowth >= 0 ? '+' : ''}${d.reviewsGrowth}`];
+            return [`时间: ${formatTime(d.fromTime)} → ${formatTime(d.toTime)}`, `间隔时间: ${formatIntervalDuration(d.fromTime, d.toTime)}`, `前次: ${d.fromSales}`, `本次: ${d.toSales}`, `评价增长: ${d.reviewsGrowth >= 0 ? '+' : ''}${d.reviewsGrowth}`];
           }}}
         },
         scales: {
@@ -1953,7 +1953,7 @@ function renderGrowthChart() {
           legend: { display: false },
           tooltip: { callbacks: { afterLabel: (c) => {
             const d = selectedIntervals[c.dataIndex];
-            return [`时间: ${formatTime(d.fromTime)} → ${formatTime(d.toTime)}`, `前次销量: ${formatNumber(d.fromSales)}`, `本次销量: ${formatNumber(d.toSales)}`, `评价增长: ${d.reviewsGrowth >= 0 ? '+' : ''}${formatNumber(d.reviewsGrowth)}`];
+            return [`时间: ${formatTime(d.fromTime)} → ${formatTime(d.toTime)}`, `间隔时间: ${formatIntervalDuration(d.fromTime, d.toTime)}`, `前次销量: ${formatNumber(d.fromSales)}`, `本次销量: ${formatNumber(d.toSales)}`, `评价增长: ${d.reviewsGrowth >= 0 ? '+' : ''}${formatNumber(d.reviewsGrowth)}`];
           }}}
         },
         scales: {
@@ -2699,6 +2699,24 @@ function showLoading(text) {
   document.getElementById('loadingOverlay').style.display = 'flex';
 }
 function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
+
+
+function formatIntervalDuration(fromTime, toTime) {
+  const from = new Date(String(fromTime || '').replace(' ', 'T'));
+  const to = new Date(String(toTime || '').replace(' ', 'T'));
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return '-';
+
+  let minutes = Math.max(0, Math.round((to - from) / 60000));
+  const days = Math.floor(minutes / 1440);
+  minutes %= 1440;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  const parts = [];
+  if (days) parts.push(`${days}天`);
+  if (hours || days) parts.push(`${hours}小时`);
+  parts.push(`${mins}分钟`);
+  return parts.join(' ');
+}
 
 function formatTime(timeStr) {
   if (!timeStr) return '-';
