@@ -2208,6 +2208,9 @@ function renderStoreChart() {
   }
 
   const container = document.querySelector('#subtab-store-stats .chart-container');
+  if (container.querySelector('.custom-since-chart-layout')) {
+    container.innerHTML = '<canvas id="storeChart"></canvas>';
+  }
   if (!container.querySelector('canvas')) {
     container.innerHTML = '<canvas id="storeChart"></canvas>';
   }
@@ -2347,8 +2350,18 @@ function renderCustomSinceChart() {
     return;
   }
 
-  if (!container.querySelector('canvas')) {
-    container.innerHTML = '<canvas id="storeChart"></canvas>';
+  if (!container.querySelector('.custom-since-chart-layout')) {
+    container.innerHTML = `
+      <div class="custom-since-chart-layout">
+        <div class="custom-since-chart-main">
+          <div class="custom-since-chart-title">距自定义时间销量增长占比（全部增长商品）</div>
+          <canvas id="storeChart"></canvas>
+        </div>
+        <div class="custom-since-product-legend-wrap">
+          <div class="custom-since-product-legend-title">商品链接</div>
+          <div id="customSinceProductLegend" class="custom-since-product-legend"></div>
+        </div>
+      </div>`;
   }
   if (storeChartInstance) storeChartInstance.destroy();
 
@@ -2368,6 +2381,39 @@ function renderCustomSinceChart() {
   const salesValues = displayProducts.map(p => Number(p.salesGrowth || 0));
   const totalSales = salesValues.reduce((sum, value) => sum + value, 0);
   const palette = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#a855f7','#14b8a6','#f97316','#eab308','#ec4899','#6366f1','#84cc16','#06b6d4','#fb7185','#8b5cf6','#10b981','#f43f5e','#0ea5e9','#d946ef','#65a30d','#facc15'];
+  const chartTitle = `距 ${data.summary.sinceTime ? data.summary.sinceTime.slice(0, 16) : '自定义时间'} 销量增长占比（全部增长商品）`;
+  const chartTitleEl = container.querySelector('.custom-since-chart-title');
+  if (chartTitleEl) chartTitleEl.textContent = chartTitle;
+
+  const legend = document.getElementById('customSinceProductLegend');
+  if (legend) {
+    legend.innerHTML = '';
+    displayProducts.forEach((product, index) => {
+      const item = document.createElement('div');
+      item.className = 'custom-since-product-legend-item';
+      item.title = product.productName || '';
+
+      const color = document.createElement('span');
+      color.className = 'custom-since-product-legend-color';
+      color.style.backgroundColor = palette[index % palette.length];
+
+      const name = document.createElement('span');
+      name.className = 'custom-since-product-legend-name';
+      name.textContent = `¥${product.productPrice || '—'} ${product.productName || '未命名商品'}`;
+
+      const linkBtn = document.createElement('button');
+      linkBtn.type = 'button';
+      linkBtn.className = 'custom-since-product-link-btn';
+      linkBtn.textContent = '访问网址';
+      const productUrl = String(product.productUrl || '').trim();
+      linkBtn.disabled = !productUrl;
+      linkBtn.title = productUrl ? '访问该商品的网址' : '该商品暂未设置网址';
+      if (productUrl) linkBtn.addEventListener('click', () => openExternalProductUrl(productUrl));
+
+      item.append(color, name, linkBtn);
+      legend.appendChild(item);
+    });
+  }
 
   hideStoreTooltip();
 
@@ -2391,12 +2437,9 @@ function renderCustomSinceChart() {
       maintainAspectRatio: false,
       plugins: {
         title: {
-          display: true,
-          text: `距 ${data.summary.sinceTime ? data.summary.sinceTime.slice(0, 16) : '自定义时间'} 销量增长占比（全部增长商品）`,
-          color: '#e4e7ed',
-          font: { size: 16 },
+          display: false,
         },
-        legend: { labels: { color: '#9ca3af', boxWidth: 12 }, position: 'right' },
+        legend: { display: false },
         tooltip: {
           callbacks: {
             label: (ctx) => {
