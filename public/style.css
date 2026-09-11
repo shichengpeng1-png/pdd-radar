@@ -1214,7 +1214,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   display: flex;
   flex-direction: column;
   position: relative;
-  z-index: 2;
+  z-index: 10;
 }
 
 .custom-since-product-legend {
@@ -1271,7 +1271,8 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   white-space: nowrap;
   text-decoration: none;
   position: relative;
-  z-index: 3;
+  z-index: 20;
+  pointer-events: auto;
 }
 
 .custom-since-product-link-btn:disabled {
