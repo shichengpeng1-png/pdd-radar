@@ -15,6 +15,7 @@ let editProductScreenshotFilename = '';
 let editProductOcrRaw = '';
 let _storeGrowthSinceData = null;
 let storeTooltipEl = null;
+let productDetailFromUrlOpened = false;
 
 // ==================== 全局错误处理 ====================
 window.addEventListener('error', (e) => {
@@ -425,10 +426,40 @@ async function loadStores() {
     if (result.success) {
       stores = result.data;
       renderStoreList();
+      await openProductDetailFromUrl();
     }
   } catch (err) {
     showToast('加载店铺失败: ' + err.message, 'error');
   }
+}
+
+// 从圆形图新开页面时，根据 URL 中的商品 ID 自动定位并显示详情。
+async function openProductDetailFromUrl() {
+  if (productDetailFromUrlOpened) return;
+  const productId = Number(new URLSearchParams(window.location.search).get('productId'));
+  if (!Number.isInteger(productId) || productId <= 0) return;
+  productDetailFromUrlOpened = true;
+
+  for (const store of stores) {
+    try {
+      const result = await API.get(`/api/stores/${store.id}/products`);
+      const product = result.success ? result.data.find(item => Number(item.id) === productId) : null;
+      if (!product) continue;
+
+      currentStoreId = store.id;
+      products = result.data;
+      document.getElementById('productsTitle').textContent = store.name;
+      document.getElementById('addProductBtn').disabled = false;
+      document.getElementById('batchRecordBtn').disabled = false;
+      renderStoreList();
+      renderProductList();
+      await selectProduct(productId);
+      return;
+    } catch (err) {
+      console.error('打开商品详情失败:', err);
+    }
+  }
+  showToast('未找到该商品详情', 'error');
 }
 
 function renderStoreList() {
@@ -818,10 +849,11 @@ function openExternalProductUrl(rawUrl) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-// 圆形图中的入口始终优先使用商品列表当前保存的网址，避免统计数据与商品链接不同步。
-function openChartProductUrl(productId, fallbackUrl) {
-  const listedProduct = products.find(product => Number(product.id) === Number(productId));
-  openExternalProductUrl(listedProduct?.pdd_url || fallbackUrl);
+// 圆形图中的入口在新标签页打开系统内的该商品详情页。
+function openChartProductUrl(productId) {
+  const target = new URL('/legacy.html', window.location.origin);
+  target.searchParams.set('productId', String(productId));
+  window.open(target.toString(), '_blank', 'noopener,noreferrer');
 }
 
 async function copyEmbeddedWebUrl() {
@@ -2420,7 +2452,7 @@ function renderCustomSinceChart() {
         linkBtn.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          openChartProductUrl(product.productId, productUrl);
+          openChartProductUrl(product.productId);
         });
       } else {
         linkBtn.disabled = true;
