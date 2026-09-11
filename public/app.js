@@ -2385,6 +2385,7 @@ function renderCustomSinceChart() {
   const chartTitleEl = container.querySelector('.custom-since-chart-title');
   if (chartTitleEl) chartTitleEl.textContent = chartTitle;
 
+  // 使用独立图例，确保每条商品都能显示自己的访问网址按钮。
   const legend = document.getElementById('customSinceProductLegend');
   if (legend) {
     legend.innerHTML = '';
