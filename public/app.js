@@ -2027,6 +2027,56 @@ function renderGrowthChart() {
       }
     });
 
+  } else if (chartType === 'avg-daily-sales') {
+    // 每个点计算从首次记录到当前记录的平均日增销量，首次记录没有可计算的日均值。
+    const averageDailySales = data.cumulative.map(item =>
+      item.avgDailySalesGrowth === null || item.avgDailySalesGrowth === undefined
+        ? null
+        : Number(item.avgDailySalesGrowth)
+    );
+    chartData = {
+      labels,
+      datasets: [{
+        label: '平均日增销量',
+        data: averageDailySales,
+        borderColor: greenColor,
+        backgroundColor: greenBg,
+        tension: 0.3,
+        fill: true,
+        spanGaps: true,
+        pointRadius: 5,
+        pointBackgroundColor: greenColor,
+      }],
+    };
+
+    growthChartInstance = new Chart(ctx, {
+      type: 'line', data: chartData,
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: '平均日增销量趋势', color: '#e4e7ed', font: { size: 16 } },
+          legend: { labels: { color: '#9ca3af' } },
+          tooltip: { callbacks: { afterLabel: (c) => {
+            const d = data.cumulative[c.dataIndex];
+            if (!d || d.avgDailySalesGrowth === null || d.avgDailySalesGrowth === undefined) {
+              return '首次记录，暂无平均日增销量';
+            }
+            const average = Math.round(Number(d.avgDailySalesGrowth));
+            const totalGrowth = Number(d.salesGrowth || 0);
+            return [
+              `平均日增销量: ${average >= 0 ? '+' : ''}${formatNumber(average)}/天`,
+              `距首次增长销量: ${totalGrowth >= 0 ? '+' : ''}${formatNumber(totalGrowth)}`,
+              `距首次: ${d.daysSinceFirst} 天`,
+            ];
+          } } }
+        },
+        scales: {
+          x: { ticks: { color: '#9ca3af', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { title: { display: true, text: '平均日增销量（件/天）', color: '#9ca3af' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+
   } else if (chartType === 'total') {
     chartData = { labels, datasets: [{ label: '总销量', data: data.records.map(r => r.salesNumber), borderColor: accentColor, backgroundColor: accentBg, tension: 0.3, fill: true, pointRadius: 5, pointBackgroundColor: accentColor }] };
 
