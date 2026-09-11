@@ -2402,14 +2402,20 @@ function renderCustomSinceChart() {
       name.className = 'custom-since-product-legend-name';
       name.textContent = `¥${product.productPrice || '—'} ${product.productName || '未命名商品'}`;
 
-      const linkBtn = document.createElement('button');
-      linkBtn.type = 'button';
+      const productUrl = String(product.productUrl || '').trim();
+      // 使用原生链接而不是 window.open，避免浏览器把访问操作当作弹窗拦截。
+      const linkBtn = document.createElement(productUrl ? 'a' : 'button');
       linkBtn.className = 'custom-since-product-link-btn';
       linkBtn.textContent = '访问网址';
-      const productUrl = String(product.productUrl || '').trim();
-      linkBtn.disabled = !productUrl;
       linkBtn.title = productUrl ? '访问该商品的网址' : '该商品暂未设置网址';
-      if (productUrl) linkBtn.addEventListener('click', () => openExternalProductUrl(productUrl));
+      if (productUrl) {
+        linkBtn.href = /^https?:\/\//i.test(productUrl) ? productUrl : `https://${productUrl}`;
+        linkBtn.target = '_blank';
+        linkBtn.rel = 'noopener noreferrer';
+      } else {
+        linkBtn.type = 'button';
+        linkBtn.disabled = true;
+      }
 
       item.append(color, name, linkBtn);
       legend.appendChild(item);
