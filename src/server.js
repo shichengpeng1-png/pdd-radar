@@ -41,6 +41,16 @@ app.get('/', (req, res) => {
   res.send(html);
 });
 
+// 经典管理页也注入资源版本号，避免已打开的旧页面继续使用旧版 app.js。
+app.get('/legacy.html', (req, res) => {
+  const htmlPath = path.join(__dirname, '..', 'public', 'legacy.html');
+  let html = fs.readFileSync(htmlPath, 'utf8');
+  html = html.replace(/\?v=\d+/g, `?v=${Date.now()}`);
+  res.set(noCacheHeaders);
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
 // 静态文件禁用缓存
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   etag: false,
