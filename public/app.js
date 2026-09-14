@@ -582,10 +582,13 @@ function selectStore(id) {
   if (storeChartInstance) { storeChartInstance.destroy(); storeChartInstance = null; }
   productSearchQuery = '';
   productSortMode = 'default';
+  productTagFilter = '';
   const searchInput = document.getElementById('productSearchInput');
   if (searchInput) searchInput.value = '';
   const sortSelect = document.getElementById('productSortSelect');
   if (sortSelect) sortSelect.value = 'default';
+  const tagFilter = document.getElementById('productTagFilter');
+  if (tagFilter) tagFilter.value = '';
   const store = stores.find(s => s.id === id);
   if (!store) return;
 
@@ -2316,6 +2319,12 @@ function renderStoreChart() {
     return;
   }
 
+  // 标签占比只依赖商品列表，不要求商品已有销量记录。
+  if (chartType === 'tagShare') {
+    renderStoreTagShareChart();
+    return;
+  }
+
   const data = _storeGrowthData;
   if (!data || !data.sessions || data.sessions.length === 0) {
     const container = document.querySelector('#subtab-store-stats .chart-container');
@@ -2454,6 +2463,75 @@ function renderStoreChart() {
   }
 
   renderStoreGrowthSummary(data.summary);
+}
+
+function renderStoreTagShareChart() {
+  const container = document.querySelector('#subtab-store-stats .chart-container');
+  const summaryEl = document.getElementById('storeGrowthSummary');
+  if (!container) return;
+
+  if (!products.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;">暂无商品，添加商品后即可查看标签占比</p>';
+    if (summaryEl) summaryEl.innerHTML = '';
+    if (storeChartInstance) { storeChartInstance.destroy(); storeChartInstance = null; }
+    return;
+  }
+
+  if (storeChartInstance) { storeChartInstance.destroy(); storeChartInstance = null; }
+  container.innerHTML = '<canvas id="storeChart"></canvas>';
+
+  const tagCounts = new Map();
+  products.forEach(product => {
+    const tag = String(product.category_tag || '').trim() || '未添加标签';
+    tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+  });
+  const tagData = [...tagCounts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'zh-CN'));
+  const total = products.length;
+  const palette = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#a855f7','#14b8a6','#f97316','#eab308','#ec4899','#6366f1','#84cc16','#06b6d4','#fb7185','#8b5cf6','#10b981','#f43f5e'];
+  const ctx = document.getElementById('storeChart').getContext('2d');
+
+  storeChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: tagData.map(item => item.tag),
+      datasets: [{
+        label: '商品数量',
+        data: tagData.map(item => item.count),
+        backgroundColor: tagData.map((_, index) => palette[index % palette.length]),
+        borderColor: '#1f2937',
+        borderWidth: 2,
+        hoverOffset: 10,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: { display: true, text: '各标签商品占比', color: '#e4e7ed', font: { size: 16 } },
+        legend: { position: 'right', labels: { color: '#9ca3af', boxWidth: 12, padding: 14 } },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const count = Number(context.raw || 0);
+              return `${context.label}: ${count} 个商品（${((count / total) * 100).toFixed(1)}%）`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const largest = tagData[0];
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="growth-summary-card"><span class="label">商品总数</span><span class="value">${total}</span></div>
+      <div class="growth-summary-card"><span class="label">标签数量</span><span class="value">${tagData.length}</span></div>
+      <div class="growth-summary-card"><span class="label">最多商品标签</span><span class="value" style="font-size:15px;">${escapeHtml(largest.tag)}</span></div>
+      <div class="growth-summary-card"><span class="label">最多标签占比</span><span class="value">${((largest.count / total) * 100).toFixed(1)}%</span></div>
+    `;
+  }
 }
 
 function renderCustomSinceChart() {
