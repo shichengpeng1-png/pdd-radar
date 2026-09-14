@@ -48,6 +48,9 @@
         <div id="subtab-product-list" class="sub-tab-content active">
           <div class="search-bar">
             <input type="text" id="productSearchInput" class="input-field search-input" placeholder="搜索商品名称...">
+            <select id="productTagFilter" class="input-field product-tag-filter" aria-label="按标签筛选商品">
+              <option value="">全部标签</option>
+            </select>
             <select id="productSortSelect" class="input-field" style="width:auto;flex-shrink:0;font-size:12px;padding:6px 8px;">
               <option value="default">默认排序</option>
               <option value="growth-desc">销量增长 ↓</option>
@@ -245,6 +248,8 @@
           <input type="text" id="newProductName" class="input-field" placeholder="例如：无线蓝牙耳机">
           <label>拼多多链接（可选）</label>
           <input type="text" id="newProductUrl" class="input-field" placeholder="https://mobile.yangkeduo.com/goods.html?...">
+          <label>标签（可选）</label>
+          <input type="text" id="newProductTag" class="input-field" maxlength="20" placeholder="例如：主推、待观察、清仓">
           <div class="modal-actions">
             <button class="btn btn-secondary modal-cancel">取消</button>
             <button id="confirmAddProduct" class="btn btn-primary">确认添加</button>
@@ -321,6 +326,8 @@
             <input type="text" id="editProductPrice" class="input-field" inputmode="decimal" placeholder="可选">
             <div id="editProductLastSales" class="sales-reference">上次销量：--</div>
           </div>
+          <label>标签（可选）</label>
+          <input type="text" id="editProductTag" class="input-field" maxlength="20" placeholder="例如：主推、待观察、清仓">
           <label>本次销量记录（可选）</label>
           <div class="edit-product-value-row">
             <input type="text" id="editProductSales" class="input-field" inputmode="numeric" placeholder="上传或粘贴图片后自动识别填写">
@@ -386,7 +393,7 @@
     </div>
   </div>
 
-  <script src="/app.js?v=51"></script>
+  <script src="/app.js?v=52"></script>
 </body>
 </html>
 
