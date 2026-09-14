@@ -261,6 +261,8 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 }
 
 .list-item-meta .sales { color: var(--accent); font-weight: 600; }
+.product-tag-filter{width:auto;max-width:130px;flex-shrink:0;font-size:12px;padding:6px 8px}
+.product-tag{display:inline-flex;align-items:center;max-width:120px;margin-left:6px;padding:1px 6px;border:1px solid rgba(96,165,250,.7);border-radius:999px;background:rgba(59,130,246,.14);color:#93c5fd;font-size:11px;font-weight:600;line-height:18px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .list-item-delete {
   position: absolute;
