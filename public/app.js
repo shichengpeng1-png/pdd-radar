@@ -2315,6 +2315,13 @@ function renderStoreChart() {
   }
 
   const chartType = document.getElementById('storeChartType').value;
+  const customControls = document.getElementById('customSinceControls');
+  const tagGrowthFilter = document.getElementById('tagGrowthFilter');
+  const tagGrowthFilterLabel = document.getElementById('tagGrowthFilterLabel');
+  if (customControls) customControls.style.display = ['customSince', 'tagShare'].includes(chartType) ? 'flex' : 'none';
+  if (tagGrowthFilter) tagGrowthFilter.style.display = chartType === 'tagShare' ? 'inline-block' : 'none';
+  if (tagGrowthFilterLabel) tagGrowthFilterLabel.style.display = chartType === 'tagShare' ? 'inline-block' : 'none';
+  if (chartType === 'tagShare') populateTagGrowthFilter();
 
   // 自定义时间增长图表单独处理
   if (chartType === 'customSince') {
