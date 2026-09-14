@@ -39,6 +39,7 @@ function initTables() {
       store_id INTEGER NOT NULL,
       name TEXT NOT NULL,
       pdd_url TEXT,
+      category_tag TEXT,
       screenshot_filename TEXT,
       created_at TEXT DEFAULT (datetime('now', 'localtime')),
       FOREIGN KEY (store_id) REFERENCES stores(id)
@@ -81,6 +82,14 @@ function initTables() {
     const cols = d.prepare("PRAGMA table_info(products)").all();
     if (!cols.some(c => c.name === 'price')) {
       d.exec('ALTER TABLE products ADD COLUMN price TEXT');
+    }
+  } catch (e) { /* 列可能已存在 */ }
+
+  // 迁移：为已有 products 表添加分类标签列（不影响已有商品与记录）
+  try {
+    const cols = d.prepare("PRAGMA table_info(products)").all();
+    if (!cols.some(c => c.name === 'category_tag')) {
+      d.exec('ALTER TABLE products ADD COLUMN category_tag TEXT');
     }
   } catch (e) { /* 列可能已存在 */ }
 
@@ -163,9 +172,9 @@ function updateStore(id, name, url) {
 
 // ==================== 商品操作 ====================
 
-function addProduct(storeId, name, pddUrl, price) {
+function addProduct(storeId, name, pddUrl, price, categoryTag) {
   const d = getDB();
-  const info = d.prepare('INSERT INTO products (store_id, name, pdd_url, price) VALUES (?, ?, ?, ?)').run(storeId, name, pddUrl || null, price || null);
+  const info = d.prepare('INSERT INTO products (store_id, name, pdd_url, price, category_tag) VALUES (?, ?, ?, ?, ?)').run(storeId, name, pddUrl || null, price || null, categoryTag || null);
   return getProduct(info.lastInsertRowid);
 }
 
@@ -242,9 +251,12 @@ function deleteProduct(id) {
   d.prepare('DELETE FROM products WHERE id = ?').run(id);
 }
 
-function updateProduct(id, name, pddUrl, price) {
+function updateProduct(id, name, pddUrl, price, categoryTag) {
   const d = getDB();
-  d.prepare('UPDATE products SET name = ?, pdd_url = ?, price = ? WHERE id = ?').run(name, pddUrl, price || null, id);
+  // 未传标签时保留原标签，避免仅修改价格等操作意外清空分类。
+  const keepExistingTag = categoryTag === undefined;
+  d.prepare('UPDATE products SET name = ?, pdd_url = ?, price = ?, category_tag = CASE WHEN ? THEN category_tag ELSE ? END WHERE id = ?')
+    .run(name, pddUrl, price || null, keepExistingTag ? 1 : 0, categoryTag || null, id);
   return getProduct(id);
 }
 
