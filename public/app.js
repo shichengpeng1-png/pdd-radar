@@ -255,6 +255,7 @@ function bindEvents() {
   try {
     const storeChartTypeEl = document.getElementById('storeChartType');
     const customSinceInput = document.getElementById('customSinceTime');
+    const tagGrowthFilter = document.getElementById('tagGrowthFilter');
     if (storeChartTypeEl) {
       storeChartTypeEl.addEventListener('change', () => {
         const customControls = document.getElementById('customSinceControls');
@@ -264,6 +265,7 @@ function bindEvents() {
         if (['customSince', 'tagShare'].includes(storeChartTypeEl.value)) {
           ensureCustomSinceDefault();
         }
+        if (storeChartTypeEl.value === 'tagShare') populateTagGrowthFilter();
         renderStoreChart();
       });
     }
@@ -275,6 +277,7 @@ function bindEvents() {
         if (currentStoreId && customSinceInput.value) loadStoreGrowthSinceTime(currentStoreId, customSinceInput.value);
       });
     }
+    if (tagGrowthFilter) tagGrowthFilter.addEventListener('change', renderStoreChart);
     document.querySelectorAll('.custom-since-quick-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         applyCustomSinceHours(Number(btn.dataset.hours || 24));
@@ -2489,14 +2492,33 @@ function renderStoreTagShareChart() {
   if (storeChartInstance) { storeChartInstance.destroy(); storeChartInstance = null; }
   container.innerHTML = '<canvas id="storeChart"></canvas>';
 
-  const tagGrowths = new Map();
-  growthProducts.forEach(product => {
-    const tag = String(product.categoryTag || '').trim() || '未添加标签';
-    tagGrowths.set(tag, (tagGrowths.get(tag) || 0) + Number(product.salesGrowth || 0));
-  });
-  const tagData = [...tagGrowths.entries()]
-    .map(([tag, growth]) => ({ tag, growth }))
-    .sort((a, b) => b.growth - a.growth || a.tag.localeCompare(b.tag, 'zh-CN'));
+  const selectedTag = document.getElementById('tagGrowthFilter')?.value || '';
+  const selectedProducts = selectedTag === '__untagged__'
+    ? growthProducts.filter(product => !String(product.categoryTag || '').trim())
+    : selectedTag
+      ? growthProducts.filter(product => String(product.categoryTag || '').trim() === selectedTag)
+      : growthProducts;
+  if (!selectedProducts.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;">该标签在当前时间范围内暂无正向销量增长</p>';
+    if (summaryEl) summaryEl.innerHTML = '';
+    return;
+  }
+
+  const tagData = selectedTag
+    ? selectedProducts.map(product => ({
+        label: `¥${product.productPrice || '—'} ${product.productName || '未命名商品'}`,
+        growth: Number(product.salesGrowth || 0),
+      })).sort((a, b) => b.growth - a.growth)
+    : (() => {
+        const tagGrowths = new Map();
+        selectedProducts.forEach(product => {
+          const tag = String(product.categoryTag || '').trim() || '未添加标签';
+          tagGrowths.set(tag, (tagGrowths.get(tag) || 0) + Number(product.salesGrowth || 0));
+        });
+        return [...tagGrowths.entries()]
+          .map(([tag, growth]) => ({ label: tag, growth }))
+          .sort((a, b) => b.growth - a.growth || a.label.localeCompare(b.label, 'zh-CN'));
+      })();
   const totalGrowth = tagData.reduce((sum, item) => sum + item.growth, 0);
   const palette = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#a855f7','#14b8a6','#f97316','#eab308','#ec4899','#6366f1','#84cc16','#06b6d4','#fb7185','#8b5cf6','#10b981','#f43f5e'];
   const ctx = document.getElementById('storeChart').getContext('2d');
@@ -2504,7 +2526,7 @@ function renderStoreTagShareChart() {
   storeChartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: tagData.map(item => item.tag),
+      labels: tagData.map(item => item.label),
       datasets: [{
         label: '销量增长',
         data: tagData.map(item => item.growth),
@@ -2518,7 +2540,7 @@ function renderStoreTagShareChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: { display: true, text: `各标签距 ${data.summary?.sinceTime ? String(data.summary.sinceTime).slice(0, 16) : '自定义时间'} 销量增长占比`, color: '#e4e7ed', font: { size: 16 } },
+        title: { display: true, text: `${selectedTag ? `标签「${selectedTag === '__untagged__' ? '未添加标签' : selectedTag}」下各商品` : '各标签'}距 ${data.summary?.sinceTime ? String(data.summary.sinceTime).slice(0, 16) : '自定义时间'} 销量增长占比`, color: '#e4e7ed', font: { size: 16 } },
         legend: { position: 'right', labels: { color: '#9ca3af', boxWidth: 12, padding: 14 } },
         tooltip: {
           callbacks: {
@@ -2536,12 +2558,22 @@ function renderStoreTagShareChart() {
   if (summaryEl) {
     summaryEl.innerHTML = `
       <div class="growth-summary-card"><span class="label">统计起始时间</span><span class="value" style="font-size:13px;">${data.summary?.sinceTime ? String(data.summary.sinceTime).slice(0, 16) : '-'}</span></div>
-      <div class="growth-summary-card"><span class="label">标签数量</span><span class="value">${tagData.length}</span></div>
-      <div class="growth-summary-card"><span class="label">销量增长最多标签</span><span class="value" style="font-size:15px;">${escapeHtml(largest.tag)}</span></div>
+      <div class="growth-summary-card"><span class="label">${selectedTag ? '涉及商品' : '标签数量'}</span><span class="value">${tagData.length}</span></div>
+      <div class="growth-summary-card"><span class="label">${selectedTag ? '销量增长最多商品' : '销量增长最多标签'}</span><span class="value" style="font-size:15px;">${escapeHtml(largest.label)}</span></div>
       <div class="growth-summary-card"><span class="label">销量增长总和</span><span class="value positive">+${formatNumber(totalGrowth)}</span></div>
       <div class="growth-summary-card"><span class="label">最高标签占比</span><span class="value">${((largest.growth / totalGrowth) * 100).toFixed(1)}%</span></div>
     `;
   }
+}
+
+function populateTagGrowthFilter() {
+  const select = document.getElementById('tagGrowthFilter');
+  if (!select) return;
+  const previous = select.value;
+  const tags = [...new Set(products.map(product => String(product.category_tag || '').trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'zh-CN'));
+  select.innerHTML = `<option value="">全部标签（汇总）</option><option value="__untagged__">未添加标签</option>${tags.map(tag => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join('')}`;
+  if (previous && (previous === '__untagged__' || tags.includes(previous))) select.value = previous;
 }
 
 function renderCustomSinceChart() {
