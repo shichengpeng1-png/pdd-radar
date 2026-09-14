@@ -2606,19 +2606,17 @@ function renderStoreTagShareChart() {
       name.textContent = item.label;
       row.append(color, name);
       if (selectedTag) {
-        const detailBtn = document.createElement('button');
-        detailBtn.type = 'button';
+        const detailBtn = document.createElement('a');
         detailBtn.className = 'custom-since-product-link-btn';
         detailBtn.textContent = '看详情';
         detailBtn.title = '新标签页打开该商品详情';
         if (item.productId) {
-          detailBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            openChartProductUrl(item.productId);
-          });
+          detailBtn.href = `/legacy.html?productId=${encodeURIComponent(item.productId)}`;
+          detailBtn.target = '_blank';
+          detailBtn.rel = 'noopener noreferrer';
         } else {
-          detailBtn.disabled = true;
+          detailBtn.removeAttribute('href');
+          detailBtn.setAttribute('aria-disabled', 'true');
         }
         row.appendChild(detailBtn);
       }
@@ -2731,19 +2729,17 @@ function renderCustomSinceChart() {
       name.className = 'custom-since-product-legend-name';
       name.textContent = `¥${product.productPrice || '—'} ${product.productName || '未命名商品'}`;
 
-      const linkBtn = document.createElement('button');
-      linkBtn.type = 'button';
+      const linkBtn = document.createElement('a');
       linkBtn.className = 'custom-since-product-link-btn';
       linkBtn.textContent = '看详情';
       linkBtn.title = '新标签页打开该商品详情';
       if (product.productId) {
-        linkBtn.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          openChartProductUrl(product.productId);
-        });
+        linkBtn.href = `/legacy.html?productId=${encodeURIComponent(product.productId)}`;
+        linkBtn.target = '_blank';
+        linkBtn.rel = 'noopener noreferrer';
       } else {
-        linkBtn.disabled = true;
+        linkBtn.removeAttribute('href');
+        linkBtn.setAttribute('aria-disabled', 'true');
       }
 
       item.append(color, name, linkBtn);
