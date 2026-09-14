@@ -10,6 +10,7 @@ let editingStoreId = null;
 let productSearchQuery = '';
 let batchSearchQuery = '';
 let productSortMode = 'default';
+let productTagFilter = '';
 let activeBatchPasteZone = null;
 let editProductScreenshotFilename = '';
 let editProductOcrRaw = '';
@@ -121,6 +122,17 @@ function bindEvents() {
       });
     }
   } catch (e) { console.error('[PDD Tracker] 排序事件绑定失败:', e); }
+
+  // 商品标签筛选
+  try {
+    const tagFilter = document.getElementById('productTagFilter');
+    if (tagFilter) {
+      tagFilter.addEventListener('change', (e) => {
+        productTagFilter = e.target.value;
+        renderProductList();
+      });
+    }
+  } catch (e) { console.error('[PDD Tracker] 标签筛选事件绑定失败:', e); }
 
   // 批量记录搜索
   try {
@@ -602,6 +614,13 @@ async function loadProducts(storeId) {
 
 function renderProductList() {
   const list = document.getElementById('productList');
+  const tagFilter = document.getElementById('productTagFilter');
+  if (tagFilter) {
+    const tags = [...new Set(products.map(p => String(p.category_tag || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    tagFilter.innerHTML = `<option value="">全部标签</option><option value="__untagged__">未添加标签</option>${tags.map(tag => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join('')}`;
+    if (productTagFilter && (productTagFilter === '__untagged__' || tags.includes(productTagFilter))) tagFilter.value = productTagFilter;
+    else productTagFilter = tagFilter.value;
+  }
   if (!currentStoreId || products.length === 0) {
     list.innerHTML = '<div class="list-empty">暂无商品<br>点击上方"+"添加</div>';
     return;
@@ -612,8 +631,14 @@ function renderProductList() {
     ? products.filter(p => p.name.toLowerCase().includes(productSearchQuery))
     : products;
 
+  if (productTagFilter === '__untagged__') {
+    filtered = filtered.filter(p => !String(p.category_tag || '').trim());
+  } else if (productTagFilter) {
+    filtered = filtered.filter(p => String(p.category_tag || '').trim() === productTagFilter);
+  }
+
   if (filtered.length === 0) {
-    list.innerHTML = `<div class="list-empty">未找到匹配「${productSearchQuery}」的商品</div>`;
+    list.innerHTML = `<div class="list-empty">未找到符合当前搜索或标签条件的商品</div>`;
     return;
   }
 
@@ -647,7 +672,7 @@ function renderProductList() {
       <span class="list-item-index" aria-label="第 ${index + 1} 个商品">${index + 1}</span>
       ${thumb}
       <div class="list-item-info">
-        <div class="list-item-name">${p.price ? `<span style="color:var(--accent);font-weight:600;margin-right:6px;">¥${p.price}</span>` : ''}${p.name}</div>
+        <div class="list-item-name">${p.price ? `<span style="color:var(--accent);font-weight:600;margin-right:6px;">¥${p.price}</span>` : ''}${p.name}${p.category_tag ? `<span class="product-tag" title="标签：${escapeHtml(p.category_tag)}">${escapeHtml(p.category_tag)}</span>` : ''}</div>
         <div class="list-item-meta">
           <span>${p.record_count || 0} 条记录</span>
           ${p.latest_sales_text ? `<span class="sales">${p.latest_sales_text}</span>` : ''}
@@ -666,6 +691,7 @@ function handleOpenAddProduct() {
   document.getElementById('addProductStoreName').textContent = '— ' + store.name;
   document.getElementById('newProductName').value = '';
   document.getElementById('newProductUrl').value = '';
+  document.getElementById('newProductTag').value = '';
   showModal('addProductModal');
 }
 
@@ -673,10 +699,11 @@ async function handleAddProduct() {
   if (!currentStoreId) return;
   const name = document.getElementById('newProductName').value.trim();
   const pddUrl = document.getElementById('newProductUrl').value.trim();
+  const categoryTag = document.getElementById('newProductTag').value.trim();
   if (!name) { showToast('请输入商品名称', 'error'); return; }
 
   try {
-    const result = await API.post(`/api/stores/${currentStoreId}/products`, { name, pddUrl });
+    const result = await API.post(`/api/stores/${currentStoreId}/products`, { name, pddUrl, categoryTag });
     if (result.success) {
       hideModal('addProductModal');
       showToast('商品添加成功', 'success');
@@ -815,6 +842,7 @@ function openEditProductModal() {
   document.getElementById('editProductName').value = product.name || '';
   document.getElementById('editProductUrl').value = product.pdd_url || '';
   document.getElementById('editProductPrice').value = product.price || '';
+  document.getElementById('editProductTag').value = product.category_tag || '';
   document.getElementById('editProductSales').value = '';
   const hasLastSales = product.latest_sales !== null && product.latest_sales !== undefined;
   const lastSales = hasLastSales ? Number(product.latest_sales) : null;
@@ -993,12 +1021,13 @@ async function handleEditProduct() {
   const name = document.getElementById('editProductName').value.trim();
   const pddUrl = document.getElementById('editProductUrl').value.trim();
   const price = document.getElementById('editProductPrice').value.trim();
+  const categoryTag = document.getElementById('editProductTag').value.trim();
   const salesText = document.getElementById('editProductSales').value.trim();
   if (!name) { showToast('请输入商品名称', 'error'); return; }
 
   try {
     const product = products.find(p => p.id === currentProductId);
-    const result = await API.put(`/api/products/${currentProductId}`, { name, pddUrl, price });
+    const result = await API.put(`/api/products/${currentProductId}`, { name, pddUrl, price, categoryTag });
     if (result.success) {
       if (salesText) {
         const recordResult = await API.post(`/api/products/${currentProductId}/records`, {
@@ -1018,6 +1047,7 @@ async function handleEditProduct() {
         product.name = name;
         product.pdd_url = pddUrl;
         product.price = price;
+        product.category_tag = categoryTag;
       }
       await loadProducts(currentStoreId);
       await loadRecords(currentProductId);
@@ -2727,6 +2757,12 @@ function formatTime(timeStr) {
   const hh = String(d.getHours()).padStart(2, '0');
   const mi = String(d.getMinutes()).padStart(2, '0');
   return `${mm}-${dd} ${hh}:${mi}`;
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
 }
 
 function formatNumber(n) {
