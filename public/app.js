@@ -2497,7 +2497,6 @@ function renderStoreTagShareChart() {
   }
 
   if (storeChartInstance) { storeChartInstance.destroy(); storeChartInstance = null; }
-  container.innerHTML = '<canvas id="storeChart"></canvas>';
 
   const selectedTag = document.getElementById('tagGrowthFilter')?.value || '';
   const selectedProducts = selectedTag === '__untagged__'
@@ -2515,6 +2514,8 @@ function renderStoreTagShareChart() {
     ? selectedProducts.map(product => ({
         label: `¥${product.productPrice || '—'} ${product.productName || '未命名商品'}`,
         growth: Number(product.salesGrowth || 0),
+        productName: product.productName || '未命名商品',
+        productId: product.productId,
       })).sort((a, b) => b.growth - a.growth)
     : (() => {
         const tagGrowths = new Map();
@@ -2528,6 +2529,18 @@ function renderStoreTagShareChart() {
       })();
   const totalGrowth = tagData.reduce((sum, item) => sum + item.growth, 0);
   const palette = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#a855f7','#14b8a6','#f97316','#eab308','#ec4899','#6366f1','#84cc16','#06b6d4','#fb7185','#8b5cf6','#10b981','#f43f5e'];
+  const chartTitle = `${selectedTag ? `标签「${selectedTag === '__untagged__' ? '未添加标签' : selectedTag}」下各商品` : '各标签'}距 ${data.summary?.sinceTime ? String(data.summary.sinceTime).slice(0, 16) : '自定义时间'} 销量增长占比`;
+  container.innerHTML = `
+    <div class="custom-since-chart-layout tag-growth-chart-layout">
+      <div class="custom-since-chart-main">
+        <div class="custom-since-chart-title">${escapeHtml(chartTitle)}</div>
+        <canvas id="storeChart"></canvas>
+      </div>
+      <div class="custom-since-product-legend-wrap">
+        <div class="custom-since-product-legend-title">${selectedTag ? '商品详情' : '标签占比'}</div>
+        <div id="tagGrowthProductLegend" class="custom-since-product-legend"></div>
+      </div>
+    </div>`;
   const ctx = document.getElementById('storeChart').getContext('2d');
 
   storeChartInstance = new Chart(ctx, {
@@ -2547,8 +2560,8 @@ function renderStoreTagShareChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: { display: true, text: `${selectedTag ? `标签「${selectedTag === '__untagged__' ? '未添加标签' : selectedTag}」下各商品` : '各标签'}距 ${data.summary?.sinceTime ? String(data.summary.sinceTime).slice(0, 16) : '自定义时间'} 销量增长占比`, color: '#e4e7ed', font: { size: 16 } },
-        legend: { position: 'right', labels: { color: '#9ca3af', boxWidth: 12, padding: 14 } },
+        title: { display: false },
+        legend: { display: false },
         tooltip: {
           callbacks: {
             label: (context) => {
@@ -2560,6 +2573,40 @@ function renderStoreTagShareChart() {
       }
     }
   });
+
+  const legend = document.getElementById('tagGrowthProductLegend');
+  if (legend) {
+    legend.innerHTML = '';
+    tagData.forEach((item, index) => {
+      const row = document.createElement('div');
+      row.className = 'custom-since-product-legend-item';
+      const color = document.createElement('span');
+      color.className = 'custom-since-product-legend-color';
+      color.style.backgroundColor = palette[index % palette.length];
+      const name = document.createElement('span');
+      name.className = 'custom-since-product-legend-name';
+      name.textContent = item.label;
+      row.append(color, name);
+      if (selectedTag) {
+        const detailBtn = document.createElement('button');
+        detailBtn.type = 'button';
+        detailBtn.className = 'custom-since-product-link-btn';
+        detailBtn.textContent = '看详情';
+        detailBtn.title = '新标签页打开该商品详情';
+        if (item.productId) {
+          detailBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openChartProductUrl(item.productId);
+          });
+        } else {
+          detailBtn.disabled = true;
+        }
+        row.appendChild(detailBtn);
+      }
+      legend.appendChild(row);
+    });
+  }
 
   const largest = tagData[0];
   if (summaryEl) {
