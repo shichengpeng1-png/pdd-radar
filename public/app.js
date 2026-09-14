@@ -2516,6 +2516,9 @@ function renderStoreTagShareChart() {
         growth: Number(product.salesGrowth || 0),
         productName: product.productName || '未命名商品',
         productId: product.productId,
+        baselineSales: Number(product.baselineSales || 0),
+        currentSales: Number(product.currentSales || 0),
+        currentTime: product.currentTime,
       })).sort((a, b) => b.growth - a.growth)
     : (() => {
         const tagGrowths = new Map();
@@ -2528,6 +2531,13 @@ function renderStoreTagShareChart() {
           .sort((a, b) => b.growth - a.growth || a.label.localeCompare(b.label, 'zh-CN'));
       })();
   const totalGrowth = tagData.reduce((sum, item) => sum + item.growth, 0);
+  const sinceTimestamp = new Date(String(data.summary?.sinceTime || '').replace(' ', 'T')).getTime();
+  const getAverageDailyGrowth = (item) => {
+    const currentTimestamp = new Date(String(item.currentTime || '').replace(' ', 'T')).getTime();
+    const days = (currentTimestamp - sinceTimestamp) / (1000 * 60 * 60 * 24);
+    return Number.isFinite(days) && days > 0 ? item.growth / days : null;
+  };
+  const formatDailyGrowth = (value) => value === null ? '-' : `${value >= 0 ? '+' : ''}${Number(value.toFixed(1))}/天`;
   const palette = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#a855f7','#14b8a6','#f97316','#eab308','#ec4899','#6366f1','#84cc16','#06b6d4','#fb7185','#8b5cf6','#10b981','#f43f5e'];
   const chartTitle = `${selectedTag ? `标签「${selectedTag === '__untagged__' ? '未添加标签' : selectedTag}」下各商品` : '各标签'}距 ${data.summary?.sinceTime ? String(data.summary.sinceTime).slice(0, 16) : '自定义时间'} 销量增长占比`;
   container.innerHTML = `
@@ -2565,8 +2575,16 @@ function renderStoreTagShareChart() {
         tooltip: {
           callbacks: {
             label: (context) => {
-              const growth = Number(context.raw || 0);
-              return `${context.label}: +${formatNumber(growth)}（${((growth / totalGrowth) * 100).toFixed(1)}%）`;
+              const item = tagData[context.dataIndex];
+              const growth = Number(item?.growth || 0);
+              if (!selectedTag) return `${context.label}: +${formatNumber(growth)}（${((growth / totalGrowth) * 100).toFixed(1)}%）`;
+              return [
+                `基线销量: ${formatNumber(item.baselineSales)}`,
+                `当前销量: ${formatNumber(item.currentSales)}`,
+                `销量增长: +${formatNumber(growth)}`,
+                `占比: ${((growth / totalGrowth) * 100).toFixed(1)}%`,
+                `自定义时间段日均增长销量: ${formatDailyGrowth(getAverageDailyGrowth(item))}`,
+              ];
             }
           }
         }
@@ -2604,6 +2622,25 @@ function renderStoreTagShareChart() {
         }
         row.appendChild(detailBtn);
       }
+      row.addEventListener('mouseenter', () => {
+        const chart = storeChartInstance;
+        const arc = chart?.getDatasetMeta(0)?.data[index];
+        if (!chart || !arc) return;
+        const point = arc.getCenterPoint();
+        chart.setActiveElements([{ datasetIndex: 0, index }]);
+        chart.tooltip.setActiveElements([{ datasetIndex: 0, index }], point);
+        chart.update();
+        legend.querySelectorAll('.custom-since-product-legend-item').forEach(el => el.classList.remove('is-active'));
+        row.classList.add('is-active');
+      });
+      row.addEventListener('mouseleave', () => {
+        const chart = storeChartInstance;
+        if (!chart) return;
+        chart.setActiveElements([]);
+        chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+        chart.update();
+        row.classList.remove('is-active');
+      });
       legend.appendChild(row);
     });
   }
