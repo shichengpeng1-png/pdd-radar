@@ -140,9 +140,9 @@ app.get('/api/stores/:id/products', (req, res) => {
 app.post('/api/stores/:id/products', (req, res) => {
   try {
     const storeId = parseInt(req.params.id);
-    const { name, pddUrl, price } = req.body;
+    const { name, pddUrl, price, categoryTag } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ success: false, error: '请输入商品名称' });
-    res.json({ success: true, data: storage.addProduct(storeId, name.trim(), pddUrl, price) });
+    res.json({ success: true, data: storage.addProduct(storeId, name.trim(), pddUrl, price, categoryTag) });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -151,8 +151,8 @@ app.post('/api/stores/:id/products', (req, res) => {
 app.put('/api/products/:id', (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { name, pddUrl, price } = req.body;
-    res.json({ success: true, data: storage.updateProduct(id, name, pddUrl, price) });
+    const { name, pddUrl, price, categoryTag } = req.body;
+    res.json({ success: true, data: storage.updateProduct(id, name, pddUrl, price, categoryTag) });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
