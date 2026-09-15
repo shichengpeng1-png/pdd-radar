@@ -1215,13 +1215,16 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   position: relative;
   z-index: 10;
 }
 
 .custom-since-product-legend {
   min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px 8px;
