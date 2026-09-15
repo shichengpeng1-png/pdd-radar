@@ -2532,6 +2532,9 @@ function renderStoreTagShareChart() {
       })();
   const totalGrowth = tagData.reduce((sum, item) => sum + item.growth, 0);
   const sinceTimestamp = new Date(String(data.summary?.sinceTime || '').replace(' ', 'T')).getTime();
+  const latestTimestamp = Math.max(...selectedProducts.map(product => new Date(String(product.currentTime || '').replace(' ', 'T')).getTime()).filter(Number.isFinite));
+  const totalDays = (latestTimestamp - sinceTimestamp) / (1000 * 60 * 60 * 24);
+  const averageDailyTotalGrowth = Number.isFinite(totalDays) && totalDays > 0 ? totalGrowth / totalDays : null;
   const getAverageDailyGrowth = (item) => {
     const currentTimestamp = new Date(String(item.currentTime || '').replace(' ', 'T')).getTime();
     const days = (currentTimestamp - sinceTimestamp) / (1000 * 60 * 60 * 24);
@@ -2651,6 +2654,7 @@ function renderStoreTagShareChart() {
       <div class="growth-summary-card"><span class="label">${selectedTag ? '销量增长最多商品' : '销量增长最多标签'}</span><span class="value" style="font-size:15px;">${escapeHtml(largest.label)}</span></div>
       <div class="growth-summary-card"><span class="label">销量增长总和</span><span class="value positive">+${formatNumber(totalGrowth)}</span></div>
       <div class="growth-summary-card"><span class="label">最高标签占比</span><span class="value">${((largest.growth / totalGrowth) * 100).toFixed(1)}%</span></div>
+      <div class="growth-summary-card"><span class="label">日均销量增长</span><span class="value positive">${averageDailyTotalGrowth === null ? '-' : `+${Number(averageDailyTotalGrowth.toFixed(1))}/天`}</span></div>
     `;
   }
 }
