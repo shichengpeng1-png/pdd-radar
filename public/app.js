@@ -2603,7 +2603,7 @@ function renderStoreTagShareChart() {
       row.className = 'custom-since-product-legend-item';
       const color = document.createElement('span');
       color.className = 'custom-since-product-legend-color';
-      color.style.backgroundColor = isInChart ? palette[chartIndex % palette.length] : '#64748b';
+      color.style.backgroundColor = palette[index % palette.length];
       const name = document.createElement('span');
       name.className = 'custom-since-product-legend-name';
       name.textContent = item.label;
@@ -2625,11 +2625,11 @@ function renderStoreTagShareChart() {
       }
       row.addEventListener('mouseenter', () => {
         const chart = storeChartInstance;
-        const arc = chart?.getDatasetMeta(0)?.data[chartIndex];
+        const arc = chart?.getDatasetMeta(0)?.data[index];
         if (!chart || !arc) return;
         const point = arc.getCenterPoint();
-        chart.setActiveElements([{ datasetIndex: 0, index: chartIndex }]);
-        chart.tooltip.setActiveElements([{ datasetIndex: 0, index: chartIndex }], point);
+        chart.setActiveElements([{ datasetIndex: 0, index }]);
+        chart.tooltip.setActiveElements([{ datasetIndex: 0, index }], point);
         chart.update();
         legend.querySelectorAll('.custom-since-product-legend-item').forEach(el => el.classList.remove('is-active'));
         row.classList.add('is-active');
@@ -2734,7 +2734,7 @@ function renderCustomSinceChart() {
 
       const color = document.createElement('span');
       color.className = 'custom-since-product-legend-color';
-      color.style.backgroundColor = palette[index % palette.length];
+      color.style.backgroundColor = isInChart ? palette[chartIndex % palette.length] : '#64748b';
 
       const name = document.createElement('span');
       name.className = 'custom-since-product-legend-name';
@@ -2756,11 +2756,11 @@ function renderCustomSinceChart() {
       item.append(color, name, linkBtn);
       const highlightProduct = () => {
         const chart = storeChartInstance;
-        const arc = chart?.getDatasetMeta(0)?.data[index];
+        const arc = chart?.getDatasetMeta(0)?.data[chartIndex];
         if (!chart || !arc) return;
         const point = arc.getCenterPoint();
-        chart.setActiveElements([{ datasetIndex: 0, index }]);
-        chart.tooltip.setActiveElements([{ datasetIndex: 0, index }], point);
+        chart.setActiveElements([{ datasetIndex: 0, index: chartIndex }]);
+        chart.tooltip.setActiveElements([{ datasetIndex: 0, index: chartIndex }], point);
         chart.update();
         legend.querySelectorAll('.custom-since-product-legend-item').forEach(el => el.classList.remove('is-active'));
         item.classList.add('is-active');
