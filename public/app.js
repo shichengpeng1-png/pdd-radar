@@ -2603,7 +2603,7 @@ function renderStoreTagShareChart() {
       row.className = 'custom-since-product-legend-item';
       const color = document.createElement('span');
       color.className = 'custom-since-product-legend-color';
-      color.style.backgroundColor = palette[index % palette.length];
+      color.style.backgroundColor = isInChart ? palette[chartIndex % palette.length] : '#64748b';
       const name = document.createElement('span');
       name.className = 'custom-since-product-legend-name';
       name.textContent = item.label;
@@ -2625,11 +2625,11 @@ function renderStoreTagShareChart() {
       }
       row.addEventListener('mouseenter', () => {
         const chart = storeChartInstance;
-        const arc = chart?.getDatasetMeta(0)?.data[index];
+        const arc = chart?.getDatasetMeta(0)?.data[chartIndex];
         if (!chart || !arc) return;
         const point = arc.getCenterPoint();
-        chart.setActiveElements([{ datasetIndex: 0, index }]);
-        chart.tooltip.setActiveElements([{ datasetIndex: 0, index }], point);
+        chart.setActiveElements([{ datasetIndex: 0, index: chartIndex }]);
+        chart.tooltip.setActiveElements([{ datasetIndex: 0, index: chartIndex }], point);
         chart.update();
         legend.querySelectorAll('.custom-since-product-legend-item').forEach(el => el.classList.remove('is-active'));
         row.classList.add('is-active');
@@ -2698,6 +2698,7 @@ function renderCustomSinceChart() {
 
   const ctx = document.getElementById('storeChart').getContext('2d');
   const products = data.products;
+  // 圆形图不能表达零或负数，因此只用正增长商品绘制；右侧商品详情仍需完整列出所有涉及商品。
   const displayProducts = products
     .filter(p => Number(p.salesGrowth) > 0);
 
@@ -2715,15 +2716,21 @@ function renderCustomSinceChart() {
   const chartTitle = `距 ${data.summary.sinceTime ? data.summary.sinceTime.slice(0, 16) : '自定义时间'} 销量增长占比（全部增长商品）`;
   const chartTitleEl = container.querySelector('.custom-since-chart-title');
   if (chartTitleEl) chartTitleEl.textContent = chartTitle;
+  const legendTitleEl = container.querySelector('.custom-since-product-legend-title');
+  if (legendTitleEl) legendTitleEl.textContent = `商品详情（${products.length}个）`;
 
   // 使用独立图例，确保每条商品都能显示自己的访问网址按钮。
   const legend = document.getElementById('customSinceProductLegend');
   if (legend) {
     legend.innerHTML = '';
-    displayProducts.forEach((product, index) => {
+    products.forEach((product) => {
+      // 只有正增长商品在圆形图中有扇区；其余商品依然可查看详情。
+      const chartIndex = displayProducts.indexOf(product);
+      const isInChart = chartIndex >= 0;
       const item = document.createElement('div');
       item.className = 'custom-since-product-legend-item';
       item.tabIndex = 0;
+      item.title = isInChart ? '悬停可查看该商品增长数据' : '该商品在所选时间内没有正向销量增长，不显示在圆形图中';
 
       const color = document.createElement('span');
       color.className = 'custom-since-product-legend-color';
