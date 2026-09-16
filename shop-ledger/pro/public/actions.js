@@ -26,3 +26,5 @@ $('#loginForm').onsubmit=async e=>{e.preventDefault();const b=e.target.querySele
 document.addEventListener('paste',e=>{if(view!=='imports'||$('#app').hidden)return;const files=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));if(files.length){e.preventDefault();recognizeFiles(files)}});
 document.addEventListener('dragover',e=>{if(view==='imports')e.preventDefault()});document.addEventListener('drop',e=>{if(view==='imports'&&!$('#app').hidden){e.preventDefault();recognizeFiles([...e.dataTransfer.files])}});
 (async()=>{try{const a=await api('auth');csrf=a.csrf||'';if(a.authenticated){await load();if(localStorage.getItem('ledgerQuick')==='1')recordForm()}else if(!a.configured)$('#loginError').textContent='请先在服务器安装终端中设置网站密码。'}catch(e){$('#loginError').textContent='无法连接服务器：'+e.message}})();
+
+$('#screenshotImport').onclick=()=>{view='imports';render();$('#ocrFiles').click()};
