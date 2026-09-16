@@ -30,3 +30,5 @@ match=L.importMatcher(oldRows);const missing=imported.filter(r=>!match(r));asser
 match=L.importMatcher([...oldRows,...missing]);assert.equal(imported.filter(r=>!match(r)).length,0);
 assert.equal(imported.reduce((n,r)=>n+r.amount,0),1930000);
 console.log('PASS: 17 distinct rows, recover 3 from legacy 14, repeated import adds 0');
+assert.equal(L.normalizeDate('2026 年 9 月 16 日 10:27:45'),'2026-09-16');
+const cardReceipt=L.ocr('微信支付\n-40.00\n支付方式 测试银行储蓄卡(1234)\n转账时间 2026 年 9 月 16 日 10:27:45')[0];assert.equal(cardReceipt.payment,'银行卡');assert.equal(cardReceipt.date,'2026-09-16');assert.equal(cardReceipt.transactionTime,'10:27:45');assert.equal(cardReceipt.amount,4000);console.log('PASS: spaced Chinese date and explicit card payment over platform name');

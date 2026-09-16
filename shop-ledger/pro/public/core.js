@@ -11,10 +11,14 @@ function balances(s){const m=Object.fromEntries(s.accounts.map(a=>[a.id,a.initia
 function splitInstallments(total,count){if(!Number.isInteger(count)||count<1||count>600)throw Error('期数应在 1～600');let a=Array(count).fill(Math.floor(total/count));for(let i=0;i<total%count;i++)a[i]++;return a}
 function csv(text){let out=[],row=[],cell='',quote=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quote&&text[i+1]==='"'){cell+='"';i++}else quote=!quote}else if(c===','&&!quote){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quote){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))out.push(row);row=[];cell=''}else cell+=c}if(quote)throw Error('CSV 引号不完整');row.push(cell);if(row.some(x=>x.trim()))out.push(row);return out}
 function csvWrite(rows){return '\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"').join(',')).join('\r\n')}
-function normalizeDate(s){const m=String(s).match(/(20\d{2})[年\/.\-](\d{1,2})[月\/.\-](\d{1,2})/);if(!m)return '';const d=`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;return new Date(d+'T12:00:00').getDate()===Number(m[3])?d:''}
+function normalizeDate(s){const m=String(s).match(/(20\d{2})\s*[年\/.\-]\s*(\d{1,2})\s*[月\/.\-]\s*(\d{1,2})/);if(!m)return '';const d=`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;return new Date(d+'T12:00:00').getDate()===Number(m[3])?d:''}
 function ocr(text){
 const lines=String(text).replace(/[０-９]/g,c=>String(c.charCodeAt(0)-0xff10)).replace(/[．]/g,'.').replace(/([\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])/g,'$1').split(/\r?\n/).map(s=>s.trim()).filter(Boolean),full=lines.join('\n');
-const payment=/支付宝/.test(full)?'支付宝':/微信/.test(full)?'微信':/银行卡|信用卡|储蓄卡/.test(full)?'银行卡':'',defaultDate=normalizeDate(full);
+const paymentLine=lines.find(l=>/支付方式|付款方式/.test(l))||'';
+const paymentDetail=paymentLine.replace(/^.*?(?:支付方式|付款方式)[:：\s”"']*/,'').trim();
+const payment=/银行|储蓄卡|信用卡|借记卡/.test(paymentDetail)?'银行卡':/零钱|微信/.test(paymentDetail)?'微信':/支付宝|余额宝|花呗/.test(paymentDetail)?'支付宝':/银行|储蓄卡|信用卡/.test(full)?'银行卡':/支付宝/.test(full)?'支付宝':/微信/.test(full)?'微信':'';
+const defaultDate=normalizeDate(lines.find(l=>/转账时间|交易时间|付款时间|支付时间/.test(l))||full);
+const receiptTime=full.match(/\b\d{2}:\d{2}:\d{2}\b/)?.[0]||'';
 const excluded=/优惠|折扣|减免|原价|单价|余额|订单号|交易号|流水号|商户号|手机号|订单编号|交易单号|退款/;
 const rank=l=>/实付|实际支付|实际付款|实付款|实收|实际到账/.test(l)?4:/付款金额|支付金额|收款金额|到账金额/.test(l)?3:/应付|总金额|合计|总计/.test(l)?1:0;
 function values(line,loose=false){
@@ -24,7 +28,7 @@ function values(line,loose=false){
  return [...s.matchAll(pattern)].map(m=>Math.abs(amount(loose?m[0]:m[1]||m[2])??0)).filter(n=>n>0&&n<100000000000);
 }
 const project=lines.find(l=>l.length>=2&&!/微信|支付宝|支付|付款|金额|订单|单号|交易|时间|状态|实付|合计|优惠|原价|余额|收款|^\d|^[¥￥+-]/.test(l))||'';
-const draft=(n,p=project,raw=full)=>({date:defaultDate,project:p,amount:n,payment,type:/收款成功|收款金额|实收|到账金额/.test(full)?'income':'expense',note:'OCR 识别，请核对',raw});
+const draft=(n,p=project,raw=full)=>({date:defaultDate,project:p,amount:n,payment,paymentDetail,transactionTime:receiptTime,type:/收款成功|收款金额|实收|到账金额/.test(full)?'income':'expense',note:'OCR 识别，请核对',raw});
 // Repeated dated rows are a ledger table, not competing totals on one receipt.
 const dated=lines.filter(l=>normalizeDate(l)&&/\d{2}:\d{2}:\d{2}/.test(l));
 if(dated.length>=2){return dated.map(line=>{const ns=values(line),n=ns.length===1?ns[0]:null,withdraw=/提现/.test(full),time=line.match(/\d{2}:\d{2}:\d{2}/)[0];return{...draft(n,withdraw?'货款提现':/收入/.test(line)?'平台收入':/支出/.test(line)?'平台支出':line.split(/20\d{2}[-/.]/)[0].trim()||'平台流水',line),date:normalizeDate(line),transactionTime:time,transactionId:/交易\s*(?:ID|编号|单号)/i.test(full)?(line.match(/\d{2}:\d{2}:\d{2}\s+(\d{6,40})\b/)?.[1]||''):'',type:withdraw?'transfer':/收入|收款|\+/.test(line)?'income':'expense',targetAmount:withdraw?n:0,amountHint:n===null?'该行金额不清晰，请填写；已保留此行':'已按表格逐行提取，请核对收支类型与账户'}})}
@@ -39,7 +43,7 @@ for(let i=0;i<lines.length;i++){
 }
 if(candidates.length){const top=Math.max(...candidates.map(c=>c.score)),ns=[...new Set(candidates.filter(c=>c.score===top).map(c=>c.n))];if(ns.length===1)return[{...draft(ns[0]),amountHint:top>=3?'已优先取实际付款 / 收款金额，请对照截图核对':'仅识别到合计或应付金额，请核对是否实付'}];return[{...draft(null),amountHint:'识别到多个不同金额，请对照原图填写，未自动选取'}]}
 let rows=[],context=[],currentDate=defaultDate;
-for(const line of lines){const d=normalizeDate(line);if(d){currentDate=d;context.push(line)}if(excluded.test(line)){continue}const ns=values(line);if(ns.length===1){let p=line.replace(/[¥￥]?\s*[-+]?\d+(?:\.\d{1,2})?/g,'').trim();if(/资金类型|流水类型|交易金额|交易全额/.test(full)){p=/收入/.test(line)?'平台收入':/支出/.test(line)?'平台支出':'平台流水'}else if(!p||/支付|收入|支出/.test(p))p=context.slice().reverse().find(l=>!/微信|支付宝|账单|交易|收入|支出|支付成功/.test(l)&&!normalizeDate(l))||project;rows.push({...draft(ns[0],p,[...context,line].join('\n')),date:currentDate,transactionTime:line.match(/\b\d{2}:\d{2}:\d{2}\b/)?.[0]||'',transactionId:/交易\s*(?:ID|编号|单号)/i.test(full)?(line.match(/\d{2}:\d{2}:\d{2}\s+(\d{6,40})\b/)?.[1]||''):'',type:/收入|收款|\+/.test(line)?'income':'expense',amountHint:'未找到实付标签，请核对截图金额'});context=[]}else context.push(line)}
+for(const line of lines){const d=normalizeDate(line);if(d){currentDate=d;context.push(line)}if(excluded.test(line)){continue}const ns=values(line);if(ns.length===1){let p=line.replace(/[¥￥]?\s*[-+]?\d+(?:\.\d{1,2})?/g,'').trim();if(/资金类型|流水类型|交易金额|交易全额/.test(full)){p=/收入/.test(line)?'平台收入':/支出/.test(line)?'平台支出':'平台流水'}else if(!p||/支付|收入|支出/.test(p))p=context.slice().reverse().find(l=>!/微信|支付宝|账单|交易|收入|支出|支付成功/.test(l)&&!normalizeDate(l))||project;rows.push({...draft(ns[0],p,[...context,line].join('\n')),date:currentDate,transactionTime:line.match(/\b\d{2}:\d{2}:\d{2}\b/)?.[0]||receiptTime,transactionId:/交易\s*(?:ID|编号|单号)/i.test(full)?(line.match(/\d{2}:\d{2}:\d{2}\s+(\d{6,40})\b/)?.[1]||''):'',type:/收入|收款|\+/.test(line)?'income':'expense',amountHint:'未找到实付标签，请核对截图金额'});context=[]}else context.push(line)}
 if(rows.length>1&&!/账单|明细/.test(full)&&!lines.some(l=>/(?:^|\s)[-+]\s*\d/.test(l)))return[{...draft(null),amountHint:'截图包含多个金额，无法确定实付金额，请填写'}];
 return rows.length?rows:[{...draft(null),amountHint:'未能可靠识别金额，请对照截图填写'}];
 }
