@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');const L=require('../public/core.js');
+assert.equal(L.amount('￥1,234.56'),123456);assert.equal(L.amount('1.234'),null);
+assert.deepEqual(L.csv('日期,备注\r\n2026-09-17,"a,b\nline"'),[['日期','备注'],['2026-09-17','a,b\nline']]);
+assert.equal(L.splitInstallments(1000,3).reduce((a,b)=>a+b,0),1000);assert.deepEqual(L.splitInstallments(1000,3),[334,333,333]);
+assert.equal(L.addMonths('2026-01-31',1),'2026-02-28');assert.equal(L.addMonths('2026-01-31',2),'2026-03-31');
+assert.equal(L.ocr('微 信 支 付\n2026-09-15\n胶带\n实付 ¥18.60')[0].amount,1860);
+assert.equal(L.ocr('微信支付\n2026-09-15\n胶带\n实付 ¥18.60')[0].project,'胶带');
+assert.equal(L.ocr('胶带\n¥18.60')[0].date,'');
+const list=L.ocr('2026-09-15\n包装胶带\n-18.60\n2026-09-16\n快递费用\n-12.00');assert.equal(list.length,2);assert.equal(list[1].amount,1200);
+const rows=[{type:'expense',amount:10000,rate:1,splits:[{account:'a',amount:6000},{account:'b',amount:4000}]},{type:'refund',amount:2000,rate:1,splits:[{account:'a',amount:2000}]},{type:'transfer',amount:1000,rate:1,splits:[{account:'a',amount:1000}],target:'b',targetAmount:1000}];
+assert.equal(L.totals(rows).expense,8000);assert.deepEqual(L.balances({accounts:[{id:'a',initial:20000},{id:'b',initial:0}],records:rows}),{a:15000,b:-3000});
+assert.equal(L.normalizeDate('2026-02-30'),'');console.log('PASS: amounts, CSV quoting, installments, recurring dates, OCR receipts/list, balances, transfer exclusion');
