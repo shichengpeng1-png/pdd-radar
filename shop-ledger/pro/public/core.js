@@ -19,7 +19,7 @@ const excluded=/优惠|折扣|减免|原价|单价|余额|订单号|交易号|�
 const rank=l=>/实付|实际支付|实际付款|实付款|实收|实际到账/.test(l)?4:/付款金额|支付金额|收款金额|到账金额/.test(l)?3:/应付|总金额|合计|总计/.test(l)?1:0;
 function values(line,loose=false){
  if(excluded.test(line)&&!rank(line))return[];
- const s=line.replace(/[,，](?=\d{3}(?:\D|$))/g,'').replace(/(\d)\s*\.\s*(\d{1,2})(?!\d)/g,'$1.$2');
+ const s=line.replace(/(?<![\d.])([+-]?\d{1,3}(?:[.,，]\d{3})+)\.(\d{2})(?!\d)/g,(_,a,b)=>a.replace(/[.,，]/g,'')+'.'+b).replace(/[,，](?=\d{3}(?:\D|$))/g,'').replace(/(\d)\s*\.\s*(\d{1,2})(?!\d)/g,'$1.$2');
  const pattern=loose?/(?<![\d.])[-+]?\d+(?:\.\d{1,2})?(?![\d.])/g:/(?:[¥￥]\s*|(?:^|\s)[+-]\s*)(\d+(?:\.\d{1,2})?)(?![\d.])|(?:^|\s)(\d+\.\d{2})(?=元|\s|$)/g;
  return [...s.matchAll(pattern)].map(m=>Math.abs(amount(loose?m[0]:m[1]||m[2])??0)).filter(n=>n>0&&n<100000000000);
 }
@@ -36,8 +36,8 @@ for(let i=0;i<lines.length;i++){
 }
 if(candidates.length){const top=Math.max(...candidates.map(c=>c.score)),ns=[...new Set(candidates.filter(c=>c.score===top).map(c=>c.n))];if(ns.length===1)return[{...draft(ns[0]),amountHint:top>=3?'已优先取实际付款 / 收款金额，请对照截图核对':'仅识别到合计或应付金额，请核对是否实付'}];return[{...draft(null),amountHint:'识别到多个不同金额，请对照原图填写，未自动选取'}]}
 let rows=[],context=[],currentDate=defaultDate;
-for(const line of lines){const d=normalizeDate(line);if(d){currentDate=d;context.push(line);continue}if(excluded.test(line)){continue}const ns=values(line);if(ns.length===1){let p=line.replace(/[¥￥]?\s*[-+]?\d+(?:\.\d{1,2})?/g,'').trim();if(!p||/支付|收入|支出/.test(p))p=context.slice().reverse().find(l=>!/微信|支付宝|账单|交易|收入|支出|支付成功/.test(l)&&!normalizeDate(l))||project;rows.push({...draft(ns[0],p,[...context,line].join('\n')),date:currentDate,type:/收入|收款|\+/.test(line)?'income':'expense',amountHint:'未找到实付标签，请核对截图金额'});context=[]}else context.push(line)}
-if(rows.length>1&&!/账单|明细/.test(full)&&!lines.some(l=>/^[-+]\s*\d/.test(l)))return[{...draft(null),amountHint:'截图包含多个金额，无法确定实付金额，请填写'}];
+for(const line of lines){const d=normalizeDate(line);if(d){currentDate=d;context.push(line)}if(excluded.test(line)){continue}const ns=values(line);if(ns.length===1){let p=line.replace(/[¥￥]?\s*[-+]?\d+(?:\.\d{1,2})?/g,'').trim();if(/资金类型|流水类型|交易金额|交易全额/.test(full)){p=/收入/.test(line)?'平台收入':/支出/.test(line)?'平台支出':'平台流水'}else if(!p||/支付|收入|支出/.test(p))p=context.slice().reverse().find(l=>!/微信|支付宝|账单|交易|收入|支出|支付成功/.test(l)&&!normalizeDate(l))||project;rows.push({...draft(ns[0],p,[...context,line].join('\n')),date:currentDate,type:/收入|收款|\+/.test(line)?'income':'expense',amountHint:'未找到实付标签，请核对截图金额'});context=[]}else context.push(line)}
+if(rows.length>1&&!/账单|明细/.test(full)&&!lines.some(l=>/(?:^|\s)[-+]\s*\d/.test(l)))return[{...draft(null),amountHint:'截图包含多个金额，无法确定实付金额，请填写'}];
 return rows.length?rows:[{...draft(null),amountHint:'未能可靠识别金额，请对照截图填写'}];
 }
 

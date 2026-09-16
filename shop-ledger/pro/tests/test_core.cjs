@@ -18,3 +18,5 @@ assert.equal(L.ocr('原价 ￥100.00\n优惠 ￥20.00\n余额 ￥999.00\n订单�
 assert.equal(L.ocr('实付 ￥１８．６０')[0].amount,1860);
 assert.equal(L.ocr('实付 1,234.56')[0].amount,123456);
 console.log('PASS: actual paid priority, next-line amount, spaced/fullwidth decimals, conflicting totals, excluded identifiers');
+
+const tableOcr=L.ocr('时间 交易 ID 资金类型流水类型交易全额\n2026/09/16 22:36:30 2734588937 现金收入 +1.000.00\n2026/09/15 20:10:30 2734588938 现金收入 +2,000.00');assert.deepEqual(tableOcr.map(r=>r.amount),[100000,200000]);assert.equal(tableOcr[0].date,'2026-09-16');console.log('PASS: dated platform rows and OCR thousands separators');
