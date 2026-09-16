@@ -1,6 +1,7 @@
 'use strict';
 const $=s=>document.querySelector(s),L=Ledger,esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state,revision=0,csrf='',view='overview',book='default',page=1,selected=new Set(),drafts=[],ocrWorker,busy=false;
+let lastSaveError='';
 let filters={q:'',type:'',category:'',account:'',from:'',to:'',min:'',max:'',tag:'',reimburse:''};
 const titles={overview:['经营概览','看清收入、成本与每一笔资金流向。'],ledger:['收支明细','筛选、核对与编辑你的经营账单。'],imports:['导入工作台','截图或表格 → 核对分类与账户 → 确认入账'],calendar:['收支日历','按天查看经营收支。'],accounts:['资金账户','每个账户的余额，都有明细可追溯。'],budgets:['预算管理','为经营支出设置周、月、年度额度。'],plans:['周期与分期','让固定支出按计划入账。'],goals:['存钱目标','把结余留给下一步计划。'],settings:['账本与设置','管理账本、分类、快捷模板与数据备份。']};
 const currencyCodes=['CNY','USD','EUR','GBP','HKD','JPY','KRW','AUD','CAD','SGD','TWD','CHF','NZD','THB','MYR','IDR','INR','VND','PHP','AED','SAR','BRL','MXN','RUB','ZAR','TRY','SEK','NOK','DKK','PLN','CZK','HUF','ILS','EGP','PKR','BDT','LKR','NPR','KWD','QAR','BHD','OMR','MOP','BND','KHR','LAK','MMK','KES','NGN','ARS','CLP','COP','PEN','UYU','ISK','RON','BGN','UAH'];
@@ -8,7 +9,7 @@ function toast(t){$('#toast').textContent=t;$('#toast').style.display='block';cl
 async function api(path,opt={}){const r=await fetch('/api/'+path,{...opt,headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,...opt.headers}});const data=await r.json();if(!r.ok){if(r.status===401&&!path.includes('login'))showLogin();throw Error(data.error||'请求失败')}return data}
 function showLogin(){$('#login').hidden=false;$('#app').hidden=true;$('#password').value=''}
 async function load(){const result=await api('state');state=result.state;revision=result.revision;if(!state.books.some(b=>b.id===book&&!b.archived))book=state.books.find(b=>!b.archived)?.id||state.books[0].id;$('#login').hidden=true;$('#app').hidden=false;selected.clear();render()}
-async function change(fn){if(busy)return false;busy=true;$('#syncState').textContent='正在保存…';const next=structuredClone(state);try{fn(next);const r=await api('state',{method:'PUT',body:JSON.stringify({revision,state:next})});state=next;revision=r.revision;render();toast('已保存到服务器');return true}catch(e){toast(e.message);$('#syncState').textContent='未保存，请检查提示';return false}finally{busy=false}}
+async function change(fn){lastSaveError='';if(busy){lastSaveError='正在保存上一项操作，请稍后再试';return false;}busy=true;$('#syncState').textContent='正在保存…';const next=structuredClone(state);try{fn(next);const r=await api('state',{method:'PUT',body:JSON.stringify({revision,state:next})});state=next;revision=r.revision;render();toast('已保存到服务器');return true}catch(e){lastSaveError=e.message;toast(e.message);$('#syncState').textContent='未保存，请检查提示';return false}finally{busy=false}}
 const name=(group,id)=>state[group].find(r=>r.id===id)?.name||'未分类';
 function options(group,current='',predicate=()=>true,empty){return(empty!==undefined?`<option value="">${esc(empty)}</option>`:'')+state[group].filter(r=>(!r.archived||r.id===current)&&predicate(r)).map(r=>`<option value="${esc(r.id)}" ${current===r.id?'selected':''}>${group==='categories'&&r.parent?esc(name('categories',r.parent))+' / ':''}${esc(r.name)}${r.archived?'（已归档）':''}</option>`).join('')}
 const blank=(title,description,button='')=>`<div class="empty"><div class="symbol">▤</div><h3>${title}</h3><p>${description}</p>${button}</div>`;
