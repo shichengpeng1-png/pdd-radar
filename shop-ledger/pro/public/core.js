@@ -25,6 +25,9 @@ function values(line,loose=false){
 }
 const project=lines.find(l=>l.length>=2&&!/微信|支付宝|支付|付款|金额|订单|单号|交易|时间|状态|实付|合计|优惠|原价|余额|收款|^\d|^[¥￥+-]/.test(l))||'';
 const draft=(n,p=project,raw=full)=>({date:defaultDate,project:p,amount:n,payment,type:/收款成功|收款金额|实收|到账金额/.test(full)?'income':'expense',note:'OCR 识别，请核对',raw});
+// Repeated dated rows are a ledger table, not competing totals on one receipt.
+const dated=lines.filter(l=>normalizeDate(l)&&/\d{2}:\d{2}:\d{2}/.test(l));
+if(dated.length>=2){return dated.map(line=>{const ns=values(line),n=ns.length===1?ns[0]:null,withdraw=/提现/.test(full),time=line.match(/\d{2}:\d{2}:\d{2}/)[0];return{...draft(n,withdraw?'货款提现':/收入/.test(line)?'平台收入':/支出/.test(line)?'平台支出':line.split(/20\d{2}[-/.]/)[0].trim()||'平台流水',line),date:normalizeDate(line),transactionTime:time,transactionId:/交易\s*(?:ID|编号|单号)/i.test(full)?(line.match(/\d{2}:\d{2}:\d{2}\s+(\d{6,40})\b/)?.[1]||''):'',type:withdraw?'transfer':/收入|收款|\+/.test(line)?'income':'expense',targetAmount:withdraw?n:0,amountHint:n===null?'该行金额不清晰，请填写；已保留此行':'已按表格逐行提取，请核对收支类型与账户'}})}
 const candidates=[];
 for(let i=0;i<lines.length;i++){
  const score=rank(lines[i]);if(!score)continue;
