@@ -10,3 +10,11 @@ const list=L.ocr('2026-09-15\n包装胶带\n-18.60\n2026-09-16\n快递费用\n-1
 const rows=[{type:'expense',amount:10000,rate:1,splits:[{account:'a',amount:6000},{account:'b',amount:4000}]},{type:'refund',amount:2000,rate:1,splits:[{account:'a',amount:2000}]},{type:'transfer',amount:1000,rate:1,splits:[{account:'a',amount:1000}],target:'b',targetAmount:1000}];
 assert.equal(L.totals(rows).expense,8000);assert.deepEqual(L.balances({accounts:[{id:'a',initial:20000},{id:'b',initial:0}],records:rows}),{a:15000,b:-3000});
 assert.equal(L.normalizeDate('2026-02-30'),'');console.log('PASS: amounts, CSV quoting, installments, recurring dates, OCR receipts/list, balances, transfer exclusion');
+assert.equal(L.ocr('订单金额 ￥100.00\n优惠 ￥20.00\n实付 ￥80.00')[0].amount,8000);
+assert.equal(L.ocr('微信支付\n胶带\n实际支付\n￥18 . 60\n订单号 202609170123456')[0].amount,1860);
+assert.equal(L.ocr('总金额 100.00\n实际支付 80.00')[0].amount,8000);
+assert.equal(L.ocr('实付 80.00\n实付 90.00')[0].amount,null);
+assert.equal(L.ocr('原价 ￥100.00\n优惠 ￥20.00\n余额 ￥999.00\n订单号 202609170123456')[0].amount,null);
+assert.equal(L.ocr('实付 ￥１８．６０')[0].amount,1860);
+assert.equal(L.ocr('实付 1,234.56')[0].amount,123456);
+console.log('PASS: actual paid priority, next-line amount, spaced/fullwidth decimals, conflicting totals, excluded identifiers');

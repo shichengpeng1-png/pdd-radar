@@ -12,12 +12,35 @@ function splitInstallments(total,count){if(!Number.isInteger(count)||count<1||co
 function csv(text){let out=[],row=[],cell='',quote=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quote&&text[i+1]==='"'){cell+='"';i++}else quote=!quote}else if(c===','&&!quote){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quote){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))out.push(row);row=[];cell=''}else cell+=c}if(quote)throw Error('CSV 引号不完整');row.push(cell);if(row.some(x=>x.trim()))out.push(row);return out}
 function csvWrite(rows){return '\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"').join(',')).join('\r\n')}
 function normalizeDate(s){const m=String(s).match(/(20\d{2})[年\/.\-](\d{1,2})[月\/.\-](\d{1,2})/);if(!m)return '';const d=`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;return new Date(d+'T12:00:00').getDate()===Number(m[3])?d:''}
-function ocr(text){let lines=text.replace(/([\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])/g,'$1').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);const full=lines.join('\n');const payment=/支付宝/.test(full)?'支付宝':/微信/.test(full)?'微信':/银行卡|信用卡|储蓄卡/.test(full)?'银行卡':'';const defaultDate=normalizeDate(full);let drafts=[];let context=[];let currentDate=defaultDate;const labeled=lines.filter(l=>/(实付|付款金额|支付金额|实际支付|总金额|合计)/.test(l));
-const extract=l=>{let m=l.replace(/[,，](?=\d{3})/g,'').match(/(?:[¥￥]|实付[:：\s]*|付款金额[:：\s]*|支付金额[:：\s]*|实际支付[:：\s]*|总金额[:：\s]*|合计[:：\s]*|(?:^|\s)[-+])\s*(-?\d+(?:\.\d{1,2})?)/);if(!m)m=l.match(/(?:^|\s)(-?\d+\.\d{2})(?:\s|元|$)/);return m?Math.abs(amount(m[1])):null};
-if(labeled.length===1&&extract(labeled[0])!==null){const project=lines.find(l=>l.length>=2&&!/微信|支付宝|支付|付款|金额|订单|单号|交易|时间|状态|实付|合计|^\d|^[¥￥]/.test(l))||'';return[{date:defaultDate,project,amount:extract(labeled[0]),payment,type:'expense',note:'OCR 识别，请核对',raw:full}]}
-for(const line of lines){const d=normalizeDate(line);if(d)currentDate=d;const n=extract(line);if(n!==null&&n>0&&!/合计|总计|余额|订单号|交易号/.test(line)){let project=line.replace(/[¥￥]?\s*[-+]?\d+\.\d{2}/g,'').trim();if(!project||/支付|收入|支出|20\d{2}/.test(project))project=context.slice().reverse().find(l=>!normalizeDate(l)&&!/微信|支付宝|账单|交易|收入|支出/.test(l))||'';drafts.push({date:currentDate,project,amount:n,payment,type:/收入|收款|\+/.test(line)?'income':'expense',note:'OCR 识别，请核对',raw:[...context,line].join('\n')});context=[]}else context.push(line)}
-return drafts.length?drafts:[{date:defaultDate,project:'',amount:null,payment,type:'expense',note:'未能可靠识别金额，请手动填写',raw:full}]
+function ocr(text){
+const lines=String(text).replace(/[０-９]/g,c=>String(c.charCodeAt(0)-0xff10)).replace(/[．]/g,'.').replace(/([\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])/g,'$1').split(/\r?\n/).map(s=>s.trim()).filter(Boolean),full=lines.join('\n');
+const payment=/支付宝/.test(full)?'支付宝':/微信/.test(full)?'微信':/银行卡|信用卡|储蓄卡/.test(full)?'银行卡':'',defaultDate=normalizeDate(full);
+const excluded=/优惠|折扣|减免|原价|单价|余额|订单号|交易号|流水号|商户号|手机号|订单编号|交易单号|退款/;
+const rank=l=>/实付|实际支付|实际付款|实付款|实收|实际到账/.test(l)?4:/付款金额|支付金额|收款金额|到账金额/.test(l)?3:/应付|总金额|合计|总计/.test(l)?1:0;
+function values(line,loose=false){
+ if(excluded.test(line)&&!rank(line))return[];
+ const s=line.replace(/[,，](?=\d{3}(?:\D|$))/g,'').replace(/(\d)\s*\.\s*(\d{1,2})(?!\d)/g,'$1.$2');
+ const pattern=loose?/(?<![\d.])[-+]?\d+(?:\.\d{1,2})?(?![\d.])/g:/(?:[¥￥]\s*|(?:^|\s)[+-]\s*)(\d+(?:\.\d{1,2})?)(?![\d.])|(?:^|\s)(\d+\.\d{2})(?=元|\s|$)/g;
+ return [...s.matchAll(pattern)].map(m=>Math.abs(amount(loose?m[0]:m[1]||m[2])??0)).filter(n=>n>0&&n<100000000000);
 }
+const project=lines.find(l=>l.length>=2&&!/微信|支付宝|支付|付款|金额|订单|单号|交易|时间|状态|实付|合计|优惠|原价|余额|收款|^\d|^[¥￥+-]/.test(l))||'';
+const draft=(n,p=project,raw=full)=>({date:defaultDate,project:p,amount:n,payment,type:/收款成功|收款金额|实收|到账金额/.test(full)?'income':'expense',note:'OCR 识别，请核对',raw});
+const candidates=[];
+for(let i=0;i<lines.length;i++){
+ const score=rank(lines[i]);if(!score)continue;
+ // Only parse the text after the monetary label: preceding order numbers are not amounts.
+ const tail=lines[i].replace(/^.*?(?:实付款|实际支付|实际付款|实际到账|实付|实收|付款金额|支付金额|收款金额|到账金额|应付|总金额|合计|总计)/,'');
+ let ns=values(tail,true);
+ if(!ns.length&&lines[i+1]&&!normalizeDate(lines[i+1])&&!excluded.test(lines[i+1])&&!rank(lines[i+1]))ns=values(lines[i+1],/^[¥￥\s+-]*\d+[\d.,，\s元]*$/.test(lines[i+1]));
+ for(const n of ns)candidates.push({n,score});
+}
+if(candidates.length){const top=Math.max(...candidates.map(c=>c.score)),ns=[...new Set(candidates.filter(c=>c.score===top).map(c=>c.n))];if(ns.length===1)return[{...draft(ns[0]),amountHint:top>=3?'已优先取实际付款 / 收款金额，请对照截图核对':'仅识别到合计或应付金额，请核对是否实付'}];return[{...draft(null),amountHint:'识别到多个不同金额，请对照原图填写，未自动选取'}]}
+let rows=[],context=[],currentDate=defaultDate;
+for(const line of lines){const d=normalizeDate(line);if(d){currentDate=d;context.push(line);continue}if(excluded.test(line)){continue}const ns=values(line);if(ns.length===1){let p=line.replace(/[¥￥]?\s*[-+]?\d+(?:\.\d{1,2})?/g,'').trim();if(!p||/支付|收入|支出/.test(p))p=context.slice().reverse().find(l=>!/微信|支付宝|账单|交易|收入|支出|支付成功/.test(l)&&!normalizeDate(l))||project;rows.push({...draft(ns[0],p,[...context,line].join('\n')),date:currentDate,type:/收入|收款|\+/.test(line)?'income':'expense',amountHint:'未找到实付标签，请核对截图金额'});context=[]}else context.push(line)}
+if(rows.length>1&&!/账单|明细/.test(full)&&!lines.some(l=>/^[-+]\s*\d/.test(l)))return[{...draft(null),amountHint:'截图包含多个金额，无法确定实付金额，请填写'}];
+return rows.length?rows:[{...draft(null),amountHint:'未能可靠识别金额，请对照截图填写'}];
+}
+
 function budgetUsed(s,b,now=today()){const d=new Date(now+'T12:00:00');let start,end;if(b.period==='year'){start=now.slice(0,4)+'-01-01';end=now.slice(0,4)+'-12-31'}else if(b.period==='week'){let day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);start=localDate(d);d.setDate(d.getDate()+6);end=localDate(d)}else{start=now.slice(0,7)+'-01';end=now.slice(0,7)+'-31'}let ids=b.category?[b.category,...s.categories.filter(c=>c.parent===b.category).map(c=>c.id)]:[];return totals(s.records.filter(r=>r.book===b.book&&r.date>=start&&r.date<=end&&(!ids.length||ids.includes(r.category)))).expense}
 function localDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function addMonths(day,n){let d=new Date(day+'T12:00:00'),anchor=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+n);d.setDate(Math.min(anchor,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));return localDate(d)}
